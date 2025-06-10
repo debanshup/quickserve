@@ -1,0 +1,153 @@
+{
+  "name": "quickserve",
+  "displayName": "QuickServe",
+  "description": "QuickServe is a local development server made for quickly previewing `.html` and `.md` files. Just run it, and it serves your current workspace—no setup or config needed.",
+  "version": "0.0.2",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "icon": "images/quickserve.png",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "repository": {
+    "url": "https://github.com/debanshup/quickserve"
+  },
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "quickserve.run",
+        "title": "run"
+      },
+      {
+        "command": "quickserve.kill",
+        "title": "kill"
+      }
+    ],
+    "configuration": {
+      "title": "Extension configuration",
+      "properties": {
+        "quickserve.publicAccess": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow access to the server from other devices within the network (e.g., over Wi-Fi or USB)"
+        },
+        "quickserve.httpServer.port": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port number for the HTTP server (default: 3000)"
+        },
+        "quickserve.wsServer.port": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port number for the WebSocket server (default: 5000)"
+        },
+        "quickserve.auto-reload": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically reload content when changes are detected"
+        },
+        "quickserve.show-statusbar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show QuickServe status in the VS Code status bar"
+        },
+        "quickserve.showInfoMessages": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display status messages such as 'Server Started', 'Server Stopped', and other server events."
+        },
+        "quickserve.ignoredFiles": {
+          "type": "array",
+          "default": [
+            ".git",
+            ".vscode",
+            ".github",
+            ".ts",
+            ".js",
+            ".log"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "List of file extensions to ignore (default: '.git', '.vscode', 'github', '.ts', '.js', '.log' and all binary files)"
+        },
+        "quickserve.logLevel": {
+          "type": "string",
+          "default": "info",
+          "enum": [
+            "error",
+            "warn",
+            "info",
+            "http",
+            "verbose",
+            "debug",
+            "silly"
+          ],
+          "description": "Set the log level for QuickServe output."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "release": "standard-version",
+    "prerelease": "standard-version --prerelease beta"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.100.0",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.5",
+    "eslint": "^9.25.1",
+    "npm-run-all": "^4.1.5",
+    "standard-version": "^9.5.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "ansi-colors": "^4.1.3",
+    "chokidar": "^4.0.3",
+    "get-port": "^7.1.0",
+    "marked": "^15.0.11",
+    "open": "^10.1.2",
+    "quick-serve": "file:",
+    "winston": "^3.17.0",
+    "ws": "^8.18.2"
+  },
+  "keywords": [
+    "server",
+    "live",
+    "preview",
+    "web"
+  ],
+  "author": {
+    "name": "Debanshu Panigrahi",
+    "email": "debanshupanigrahi@gmail.com"
+  },
+  "preview": true,
+  "license": "ISC"
+}
