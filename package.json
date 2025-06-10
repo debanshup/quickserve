@@ -6,6 +6,7 @@
   "engines": {
     "vscode": "^1.100.0"
   },
+  "publisher": "debanshupanigrahi",
   "icon": "images/quickserve.png",
   "categories": [
     "Other"
@@ -16,6 +17,7 @@
   "repository": {
     "url": "https://github.com/debanshup/quickserve"
   },
+
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
