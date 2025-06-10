@@ -2,7 +2,7 @@
   "name": "quickserve",
   "displayName": "QuickServe",
   "description": "QuickServe is a local development server made for quickly previewing `.html` and `.md` files. Just run it, and it serves your current workspace—no setup or config needed.",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "engines": {
     "vscode": "^1.100.0"
   },
