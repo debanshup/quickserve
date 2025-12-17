@@ -2,10 +2,9 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [1.0.1](https://github.com/debanshup/quickserve/compare/v1.0.1-beta.1...v1.0.1) (2025-12-17)
+## [1.1.0-beta.0](https://github.com/debanshup/quickserve/compare/v1.0.0...v1.1.0-beta.0) (2025-12-17)
 
-### [1.0.1-beta.1](https://github.com/debanshup/quickserve/compare/v2.2.0...v1.0.1-beta.1) (2025-12-17)
 
-# Changelog
+### Features
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+* improve stability, websocket binding, ui, and mobile reload ([4e18a77](https://github.com/debanshup/quickserve/commit/4e18a77326afa4066b6875cb835aab70822dfb5c))
