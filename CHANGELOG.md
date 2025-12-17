@@ -10,3 +10,7 @@ All notable changes to this project will be documented in this file. See [standa
 ### Features
 
 * improve stability, websocket binding, ui, and mobile reload ([4e18a77](https://github.com/debanshup/quickserve/commit/4e18a77326afa4066b6875cb835aab70822dfb5c))
+
+## [1.0.0](https://github.com/debanshup/quickserve/releases/tag/v1.0.0)
+
+- Initial stable release
