@@ -1,5 +1,5 @@
 import { StatusBarAlignment, StatusBarItem, window } from "vscode";
-import { Config } from "./config";
+import { Config } from "./utils/config";
 const { getShowStatusBar } = Config;
 export class StatusbarUI {
   private static _statusbar: StatusBarItem;

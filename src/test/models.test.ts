@@ -1,73 +1,57 @@
 import * as assert from "assert";
-import { HTTPServer } from "../models/ServerModel";
+import { Server } from "../models/ServerModel";
 import { FileWatcher } from "../models/WatcherModel";
-import { DocReloader } from "../models/ReloaderModel";
 import path from "path";
-import WebSocket, { WebSocketServer } from "ws";
-import fs from "fs";
-const { getAvailablePorts } = Helper;
-import { Helper } from "../helper";
-suite("HTTPServer", () => {
-  test("should start http server in given port", async () => {
-    const port = await getAvailablePorts();
-    const server = new HTTPServer(port.httpServerPort, "localhost");
-    await new Promise<void>((resolve) => {
-      server.start(()=>{
-        resolve();
-      });
-    });
-    assert.strictEqual(server.port, port.httpServerPort);
+import fs, { watch } from "fs";
+import * as Helper from "../utils/helper";
+import { Config } from "../utils/config";
+import { HOST } from "../consatnts/host";
+suite("Server", () => {
+  test("should start server in given port", async () => {
+    const port = await Helper.getAvailablePort();
+    const host = Config.isPublicAccessEnabled() ? HOST.LAN : HOST.LOCALHOST;
+    console.log("info", host, port);
+    const server = new Server(host, port);
+    await server.start(() => {});
+    assert.strictEqual(server.port, port);
+
     assert.ok(server.on);
-    server.stop();
+    await server.stop();
   });
   test("should stop server", async () => {
-    const port = await getAvailablePorts();
-    const server = new HTTPServer(port.httpServerPort, "localhost");
-    server.start();
+    const host = Config.isPublicAccessEnabled() ? HOST.LAN : HOST.LOCALHOST;
+    const port = await Helper.getAvailablePort();
+    const server = new Server(host, port);
+    await server.start(() => {});
     await server.stop();
-    assert.strictEqual(server.on, false);
+    assert.ok(!server.on);
   });
 });
 
-suite("DocReloader", () => {
-  test("should start ws server", async () => {
-    const port = await getAvailablePorts();
-    const reloader = new DocReloader();
-    reloader.start(port.wssPort);
-    assert.ok(reloader.on);
-    await reloader.stop();
-  });
-  test("Should stop wss server", async () => {
-    const{wssPort}= await getAvailablePorts();
-    const reloader = new DocReloader();
-    reloader.start(wssPort);
-    await reloader.stop();
-    assert.strictEqual(reloader.on, false) ;
-  });
-});
-suite("FileWatcher", () => {
+suite("FileWatcher", async () => {
+  const host = Config.isPublicAccessEnabled() ? HOST.LAN : HOST.LOCALHOST;
+  const port = await Helper.getAvailablePort();
+  const server = new Server(host, port);
+  await server.start(() => {});
   const testFile = path.join(__dirname, "test.md");
-  let wss: WebSocketServer;
   let watcher: FileWatcher;
 
   setup((done) => {
     fs.writeFileSync(testFile, "initial");
-    wss = new WebSocketServer({ port: 9001 });
-    watcher = new FileWatcher(wss);
+    watcher = new FileWatcher(server.wsServer);
     done();
   });
 
   teardown(async () => {
     await watcher.stop();
     fs.unlinkSync(testFile);
-    wss.close();
+
+    assert.ok(!watcher.on);
   });
 
-  test("should send reload message on file change", (done) => {
+  test("should send reload message on file change", async (done) => {
     watcher.start();
-
-    const client = new WebSocket("ws://localhost:9001");
-
+    const client = server.wsServer;
     client.on("message", (msg) => {
       assert.equal(msg.toString(), "reload");
       client.close();
@@ -77,7 +61,9 @@ suite("FileWatcher", () => {
     client.on("open", () => {
       setTimeout(() => {
         fs.appendFileSync(testFile, "change");
-      }, 100); // wait for watcher to initialize
+      }, 100);
     });
+    await watcher.stop();
   });
+  await server.stop();
 });

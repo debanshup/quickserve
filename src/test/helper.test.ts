@@ -1,8 +1,8 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { Helper } from "../helper";
+import * as Helper from "../utils/helper";
 const {
-  getAvailablePorts,
+  getAvailablePort,
   getFileExtension,
   isSupportedFile,
   getCurrentFile,
@@ -27,9 +27,8 @@ suite("Helpers test", () => {
     assert.strictEqual(result, vscode.window.activeTextEditor?.document.fileName!);
   });
   test("getAvailablePorts() returns available ports", async () => {
-    const ports = await getAvailablePorts();
-    console.log(ports.httpServerPort, ports.wssPort);
-    assert.ok(ports.httpServerPort > 0);
-    assert.ok(ports.wssPort > 0);
+    const port = await getAvailablePort();
+    console.log(port);
+    assert.ok(port > 0);
   });
 });

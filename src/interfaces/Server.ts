@@ -1,4 +1,4 @@
-export interface Server {
+export interface IServer {
   on: boolean;
   port: number | null;
   start(): void;

@@ -2,77 +2,225 @@
 <html>
   <head>
     <title>File Explorer</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <style></style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta charset="UTF-8" />
   </head>
-  <body class="min-h-screen w-full">
-    <h2 class="text-center text-xl font-semibold my-4">__ROOT__</h2>
+  <style>
+    /* Theme Variables */
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --hover-bg: whitesmoke;
+      --active-bg: #e5e5e5;
+      --border-color: #eee;
+    }
 
-    <div
-      id="file-tree"
-      class="max-w-2xl flex flex-col items-baseline mx-auto justify-center text-gray-800"
-    ></div>
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1a1a1a; /* Darker background for OLED savings */
+        --text-color: #f0f0f0;
+        --hover-bg: #2c2c2e;
+        --active-bg: #3a3a3c;
+        --border-color: #333;
+      }
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .app {
+      background: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Helvetica, Arial, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Title */
+    .title {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      background: var(--bg-color);
+      z-index: 10;
+
+      word-wrap: break-word;
+      line-height: 1.4;
+    }
+
+    /* Tree container */
+    .file-tree {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 2rem;
+    }
+
+    /* Nodes */
+    .node {
+      margin: 0;
+    }
+
+    /* Shared styles for rows (folders and files) to ensure hit areas are large */
+    .folder,
+    .file {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      padding: 12px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: background-color 0.1s;
+    }
+
+    /* Feedback for Touch interactions */
+    .folder:active,
+    .file:active {
+      background-color: var(--active-bg);
+    }
+
+    /* Keep hover for desktop/mouse users */
+    @media (hover: hover) {
+      .folder:hover,
+      .file:hover {
+        background-color: var(--hover-bg);
+      }
+    }
+
+    .folder-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 4px;
+      font-size: 1.1em;
+    }
+
+    .folder-label {
+      font-weight: 500;
+      font-size: 1rem;
+    }
+
+    .file {
+      margin-left: 1.5rem;
+    }
+
+    .file-name {
+      margin-left: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    /* Children container */
+    .children {
+      margin-left: 1rem;
+      display: none;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .children.open {
+      display: block;
+    }
+  </style>
+  <body class="app">
+    <h2 class="title">File Explorer (root path: __ROOT__)</h2>
+
+    <div id="file-tree" class="file-tree"></div>
+
     <script>
-      const fileTree = __FILE_TREE__;
+      // Mock data for testing since __FILE_TREE__ is server-side
+      const fileTree =
+        typeof __FILE_TREE__ !== "undefined"
+          ? __FILE_TREE__
+          : [
+              {
+                type: "folder",
+                name: "src",
+                children: [
+                  {
+                    type: "file",
+                    name: "index.js",
+                    url: "demo-root/src/index.js",
+                  },
+                  {
+                    type: "file",
+                    name: "style.css",
+                    url: "demo-root/src/style.css",
+                  },
+                ],
+              },
+              { type: "file", name: "README.md", url: "demo-root/README.md" },
+            ];
 
       const port = "__PORT__";
 
       function openFile(path) {
-        // Opens the file in a new tab by constructing the URL with port
-        const url =
-          path.replace(/^.*?demo-root/, "");
+        const url = path.replace(/^.*?demo-root/, "");
         window.open(url, "");
       }
 
       function buildTree(nodes, parent) {
         nodes.forEach((node) => {
           const el = document.createElement("div");
+          el.className = "node"; // Class moved to wrapper
+
           if (node.type === "folder") {
-            const folderSpan = document.createElement("span");
+            const folder = document.createElement("div");
+            folder.className = "folder";
 
             const icon = document.createElement("span");
-            icon.textContent = "▸"; // collapsed by default
-            icon.className = "mr-1";
+            icon.textContent = "▸";
+            icon.className = "folder-icon";
 
             const label = document.createElement("span");
             label.textContent = `📁 ${node.name}`;
+            label.className = "folder-label";
 
-            folderSpan.appendChild(icon);
-            folderSpan.appendChild(label);
+            folder.appendChild(icon);
+            folder.appendChild(label);
 
-            folderSpan.className =
-              "block px-2 py-1 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 cursor-pointer text-sm font-medium flex items-center gap-2";
+            const children = document.createElement("div");
+            children.className = "children";
 
-            const childrenContainer = document.createElement("div");
-            childrenContainer.className = "ml-4 mt-1 space-y-1";
-            childrenContainer.style.display = "none";
-
-            folderSpan.onclick = () => {
-              const isOpen = childrenContainer.style.display === "none";
-              childrenContainer.style.display = isOpen ? "block" : "none";
-              icon.textContent = isOpen ? "▾" : "▸";
+            // Toggle logic
+            folder.onclick = (e) => {
+              e.stopPropagation(); // Good practice
+              const open = children.classList.toggle("open");
+              icon.textContent = open ? "▾" : "▸";
             };
 
-            el.className = "my-1";
-            el.appendChild(folderSpan);
-            el.appendChild(childrenContainer);
+            el.appendChild(folder);
+            el.appendChild(children);
             parent.appendChild(el);
 
-            if (node.children) buildTree(node.children, childrenContainer);
+            if (node.children) buildTree(node.children, children);
           } else {
-            el.innerHTML = `📄 <span>${node.name}</span>`; // File icon
-            el.className =
-              "file px-2 py-1 rounded bg-white text-gray-700 hover:bg-gray-50 cursor-pointer text-sm ml-6 flex items-center gap-2";
-            el.onclick = () => openFile(node.url);
+            const file = document.createElement("div");
+            file.className = "file";
+            file.innerHTML = `📄 <span class="file-name">${node.name}</span>`;
+            file.onclick = (e) => {
+              e.stopPropagation();
+              openFile(node.url);
+            };
+
+            el.appendChild(file);
             parent.appendChild(el);
           }
         });
       }
 
       document.addEventListener("DOMContentLoaded", () => {
-        const container = document.getElementById("file-tree");
-        buildTree(fileTree, container);
+        buildTree(fileTree, document.getElementById("file-tree"));
       });
     </script>
   </body>

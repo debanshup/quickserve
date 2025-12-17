@@ -1,15 +1,13 @@
 import * as chokidar from "chokidar";
-import { Watcher } from "../types/Watcher";
+import { Watcher } from "../interfaces/Watcher";
 import { WebSocketServer } from "ws";
-import fs from "fs";
-import { resolve } from "path";
 import {
   LogEventTypes,
   LoggerEvents,
 } from "./observer/log_observer/logEventEmitter";
 export class FileWatcher implements Watcher {
   private watcher?: chokidar.FSWatcher;
-  private wss?: WebSocketServer;
+  private wsServer?: WebSocketServer;
   private files: string | any;
   private ignoredFileList: chokidar.Matcher = [] as unknown as chokidar.Matcher;
 
@@ -18,10 +16,8 @@ export class FileWatcher implements Watcher {
    *
    * @param wss - The WebSocketServer instance used to broadcast file change events.
    */
-  constructor(
-    wss: WebSocketServer,
-  ) {
-    this.wss = wss;
+  constructor(wss: WebSocketServer) {
+    this.wsServer = wss;
   }
 
   on: boolean = false;
@@ -32,7 +28,7 @@ export class FileWatcher implements Watcher {
    * @returns void
    */
   add(file: string): void {
-    // this.files.add(file);
+
     this.watcher?.add(file);
   }
 
@@ -45,10 +41,12 @@ export class FileWatcher implements Watcher {
       ignored: this.ignoredFileList,
       awaitWriteFinish: false,
       persistent: true,
+      
     });
-    this.watcher.on("change", (path) => {
-      this.wss?.clients.forEach((ws) => {
-        ws.send(JSON.stringify({ action: "reload" }));
+    this.watcher.on("change", (_path) => {
+      // console.log("path", path);
+      this.wsServer?.clients.forEach((ws) => {
+          ws.send(JSON.stringify({ action: "reload" }));
       });
     });
     this.watcher.on("add", (path) => {

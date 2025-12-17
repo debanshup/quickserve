@@ -64,4 +64,4 @@ npm test
 
 ## Reporting Issues
 
-If you encounter any issues, please create a new [issue](https://github.com/debanshup/quick-serve/issues).
+If you encounter any issues, please create a new [issue](https://github.com/debanshup/quickserve/issues).

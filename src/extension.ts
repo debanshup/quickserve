@@ -1,14 +1,11 @@
 import * as vscode from "vscode";
-import "open";
-import { App } from "./models/AppModel";
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+import { App } from "./app/App";
+import { checkVersion } from "./utils/helper";
+export async function activate(context: vscode.ExtensionContext) {
+  await checkVersion(context);
   const app: App = new App();
   context.subscriptions.push(
     vscode.commands.registerCommand("quickserve.run", async () => {
-      console.log("App started");
-      
       await app.start();
     })
   );

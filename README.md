@@ -1,6 +1,8 @@
 # Introduction
 
-**QuickServe** is a local development server made for quickly previewing `.html` and `.md` files.
+![Logo](https://github.com/debanshup/quickserve/blob/stable/images/quickserve.png?raw=true)
+
+**QuickServe** is a zero-config local development server made for quickly previewing HTML and MARKDOWN files.
 Just run it, and it serves your current workspace—no setup or config needed.
 
 It’s built mainly for HTML and Markdown, but supports other file types too. Great for quick testing or writing docs.
@@ -18,11 +20,11 @@ It’s built mainly for HTML and Markdown, but supports other file types too. Gr
 
 ---
 
-<!-- ### Screenshots
+## Demo
 
-![Start Server]( https://github.com/debanshup/quick-serve/blob/master/images/screenshots/quickserve-demo.gif )
+![Demo](https://github.com/debanshup/quickserve/blob/stable/images/instructions/demo.gif?raw=true)
 
---- -->
+---
 
 ## Installation
 
@@ -34,7 +36,18 @@ It’s built mainly for HTML and Markdown, but supports other file types too. Gr
     ext install debanshupanigrahi.quickserve
 ```
 
-   **_Tip:_** You can also install from the Extensions sidebar by searching the extension name directly.
+**_Tip:_** You can also install from the Extensions sidebar by searching the extension name directly.
+
+---
+
+## How to use
+
+1. Start the server
+   ![Start server](https://github.com/debanshup/quickserve/blob/stable/images/instructions/right.png?raw=true)
+
+2. Open output for logs
+   ![Open output](https://github.com/debanshup/quickserve/blob/stable/images/instructions/left.png?raw=true)
+   ![Open output](https://github.com/debanshup/quickserve/blob/stable/images/instructions/output.png?raw=true)
 
 ---
 

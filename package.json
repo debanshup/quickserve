@@ -1,15 +1,17 @@
 {
   "name": "quickserve",
   "displayName": "QuickServe",
-  "description": "QuickServe is a local development server made for quickly previewing `.html` and `.md` files. Just run it, and it serves your current workspace—no setup or config needed.",
+  "description": "A zero-config local development server made for quickly previewing HTML and MARKDOWN files.",
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.100.0"
   },
   "publisher": "debanshupanigrahi",
-  "icon": "images/quickserve.png",
+  "icon": "images/logo.png",
   "categories": [
-    "Other"
+    "Testing",
+    "Debuggers",
+    "Visualization"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -17,7 +19,6 @@
   "repository": {
     "url": "https://github.com/debanshup/quickserve"
   },
-
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -35,7 +36,7 @@
       "properties": {
         "quickserve.publicAccess": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Allow access to the server from other devices within the network (e.g., over Wi-Fi or USB)"
         },
         "quickserve.httpServer.port": {
@@ -43,14 +44,7 @@
           "default": 3000,
           "minimum": 1,
           "maximum": 65535,
-          "description": "Port number for the HTTP server (default: 3000)"
-        },
-        "quickserve.wsServer.port": {
-          "type": "number",
-          "default": 5000,
-          "minimum": 1,
-          "maximum": 65535,
-          "description": "Port number for the WebSocket server (default: 5000)"
+          "description": "Port number for the server (default: 3000)"
         },
         "quickserve.auto-reload": {
           "type": "boolean",
@@ -66,35 +60,6 @@
           "type": "boolean",
           "default": true,
           "description": "Display status messages such as 'Server Started', 'Server Stopped', and other server events."
-        },
-        "quickserve.ignoredFiles": {
-          "type": "array",
-          "default": [
-            ".git",
-            ".vscode",
-            ".github",
-            ".ts",
-            ".js",
-            ".log"
-          ],
-          "items": {
-            "type": "string"
-          },
-          "description": "List of file extensions to ignore (default: '.git', '.vscode', 'github', '.ts', '.js', '.log' and all binary files)"
-        },
-        "quickserve.logLevel": {
-          "type": "string",
-          "default": "info",
-          "enum": [
-            "error",
-            "warn",
-            "info",
-            "http",
-            "verbose",
-            "debug",
-            "silly"
-          ],
-          "description": "Set the log level for QuickServe output."
         }
       }
     }
@@ -118,6 +83,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.100.0",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
@@ -131,25 +97,21 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "ansi-colors": "^4.1.3",
     "chokidar": "^4.0.3",
     "get-port": "^7.1.0",
     "marked": "^15.0.11",
-    "open": "^10.1.2",
-    "quick-serve": "file:",
-    "winston": "^3.17.0",
     "ws": "^8.18.2"
   },
   "keywords": [
     "server",
+    "static",
+    "quick",
     "live",
-    "preview",
     "web"
   ],
   "author": {
     "name": "Debanshu Panigrahi",
     "email": "debanshupanigrahi@gmail.com"
   },
-  "preview": true,
   "license": "ISC"
 }

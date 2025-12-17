@@ -1,21 +1,8 @@
-import * as winston from "winston";
-import { Config } from "../../../config";
-// console.log(process.env.NODE_ENV);
-// console.log(Config.getCurrentLogLevel());
-
-export const logger = winston.createLogger({
-  // level: Config.getCurrentLogLevel(),
-  level:"http",
-  format: winston.format.combine(
-    winston.format.colorize(),
-    winston.format.printf(({ message }) => message as string)
-  ),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.Stream({ stream: process.stdout }),
-  ],
+import * as vscode from "vscode";
+export const logger = vscode.window.createOutputChannel("quickserve_log", {
+  log: true,
 });
-
+// logger.show(true);
 export enum LogLevel {
   ERROR = "error",
   WARN = "warn",
@@ -24,4 +11,20 @@ export enum LogLevel {
   VERBOSE = "verbose",
   DEBUG = "debug",
   SILLY = "silly",
+}
+export function log(level: LogLevel, message: any) {
+  switch (level) {
+    case LogLevel.ERROR:
+      logger.error(message);
+      break;
+    case LogLevel.WARN:
+      logger.warn(message);
+      break;
+    case LogLevel.DEBUG:
+    case LogLevel.SILLY:
+      logger.debug(message);
+      break;
+    default:
+      logger.info(message);
+  }
 }
