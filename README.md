@@ -1,6 +1,6 @@
 # Introduction
 
-![Logo](https://github.com/debanshup/quickserve/blob/stable/images/quickserve.png?raw=true)
+![Logo](https://github.com/debanshup/quickserve/blob/stable/images/logo.png?raw=true)
 
 **QuickServe** is a zero-config local development server made for quickly previewing HTML and MARKDOWN files.
 Just run it, and it serves your current workspace—no setup or config needed.
