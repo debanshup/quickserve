@@ -33,19 +33,27 @@ export class Config {
   public static getShowInfoMessages(): boolean | undefined {
     return config.get<boolean>("showInfoMessages");
   }
-/**
- * 
- * @returns public access enabled
- */
+  /**
+   *
+   * @returns public access enabled
+   */
   public static isPublicAccessEnabled(): boolean | undefined {
     return config.get<boolean>("publicAccess");
   }
 
-// /**
-//  * 
-//  * @returns current log level
-//  */
-//   public static getCurrentLogLevel(): string|undefined{
-//     return config.get<string>("logLevel");
-//   }
+  public static isHttpsEnabled() {
+    return config.get<boolean>("https");
+  }
+
+  public static getSSLConfig() {
+    return config.get<{ certPath: string; keyPath: string }>("sslConfig");
+  }
+
+  // /**
+  //  *
+  //  * @returns current log level
+  //  */
+  //   public static getCurrentLogLevel(): string|undefined{
+  //     return config.get<string>("logLevel");
+  //   }
 }

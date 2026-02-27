@@ -1,44 +1,44 @@
-import { WebSocketServer } from "ws";
 import vscode from "vscode";
+import { WebSocketServer } from "ws";
 import { StatusbarUI } from "../StatusBarUI";
-// import { DocReloader } from "./ReloaderModel";
-import { Server } from "../models/ServerModel";
-import { FileWatcher } from "../models/WatcherModel";
-import path from "path";
-import fs from "fs";
 import { Config } from "../utils/config";
 import { HOST } from "../consatnts/host";
+
+import { ServerObserver } from "../core/models/observer/server_observer/ServerObserverModel";
+import { LogObserver } from "../core/models/observer/log_observer/LogObserverModel";
+
+import parse from "node-html-parser";
+import { pipeline } from "stream/promises";
+import {
+  LoggerEvents,
+  LogEventTypes,
+} from "../core/models/observer/log_observer/logEventEmitter";
 import {
   ServerEvents,
   ServerEventTypes,
-} from "../models/observer/server_observer/serverEventEmitter";
-import { ServerObserver } from "../models/observer/server_observer/ServerObserverModel";
-import { LogObserver } from "../models/observer/log_observer/LogObserverModel";
+} from "../core/models/observer/server_observer/serverEventEmitter";
+import { FileWatcher } from "../core/models/WatcherModel";
+import { Server } from "../core/models/ServerModel";
 import {
-  LogEventTypes,
-  LoggerEvents,
-} from "../models/observer/log_observer/logEventEmitter";
-import {
-  getCurrentFile,
   getCurrentDir,
-  getRelativeFilePath,
   isFolder,
+  getCurrentFile,
+  getHost,
+  getAvailablePort,
   listFilesRecursive,
   getFileBrowserUi,
   getFileExtension,
-  isSupportedFile,
-  getErrorPage,
-  isBinary,
-  getFileContent,
+  processFilesafely,
   supportsScriptInjection,
   getReloadScript,
-  getMimeType,
   getStatusCode,
-  getAvailablePort,
-  getConnectionURI,
-  getHost,
+  getErrorPage,
+  getRelativeFilePath,
   getLocalIP,
+  getConnectionURI,
 } from "../utils/helper";
+import path from "path";
+import { fileCache } from "../cache/FileCache";
 const { getAutoReloadEnabled, isPublicAccessEnabled } = Config;
 
 export class App implements vscode.Disposable {
@@ -57,10 +57,13 @@ export class App implements vscode.Disposable {
   /**
    * get server instance
    */
-  private getServer(hostname: string, port: number) {
-    // this.hostname = getHost();
-    // console.log("Hostname", this.hostname);
-    this.server = new Server(hostname, port);
+  private async getServer(
+    hostname: string,
+    port: number,
+    protocol: "https:" | "http:",
+  ) {
+    const sslConfig = Config.getSSLConfig()!;
+    this.server = await Server.create(hostname, port, protocol, sslConfig);
     return this.server;
   }
 
@@ -100,7 +103,8 @@ export class App implements vscode.Disposable {
     }
     const hostname = getHost();
     const port = await getAvailablePort();
-    const server = this.getServer(hostname, port);
+    const proto = Config.isHttpsEnabled() ? "https:" : "http:";
+    const server = await this.getServer(hostname, port, proto);
 
     // handle reload
     if (getAutoReloadEnabled()) {
@@ -125,10 +129,20 @@ export class App implements vscode.Disposable {
       });
 
       try {
-        const fullReqPath = path.join(
-          currentFolderPath,
-          decodeURIComponent(req.url!).split(/[?#]/)[0]
+        /**
+         * @fix for request path
+         */
+        console.info("REQ URL::", req.url);
+        const parsedUrl = new URL(
+          req.url!,
+          `http://${req.headers.host || "localhost"}`,
         );
+        let pathname = decodeURIComponent(parsedUrl.pathname);
+        if (pathname.startsWith("/")) {
+          pathname = pathname.slice(1);
+        }
+        
+        const fullReqPath = path.join(currentFolderPath, pathname);
 
         if (!fullReqPath.startsWith(currentFolderPath)) {
           throw new Error("Path is not started with " + currentFolderPath);
@@ -136,28 +150,58 @@ export class App implements vscode.Disposable {
 
         if (isFolder(fullReqPath)) {
           const fileTree = listFilesRecursive(fullReqPath, currentFolderPath!);
-          console.log(fullReqPath);
-          
-          const html = await getFileBrowserUi(
+          const html = getFileBrowserUi(
             this.server?.port!,
             fullReqPath.replaceAll("\\", "/"),
-            fileTree
+            fileTree,
           );
           res.writeHead(200, { "Content-Type": "text/html" });
           return res.end(html);
         }
         const ext = getFileExtension(req.url!);
-        const data = fs.readFileSync(fullReqPath);
-        let fileContent = await getFileContent(data, ext);
-        if (isSupportedFile(ext) && !isBinary(ext)) {
-          this.watcher?.add(fullReqPath);
+
+        let result = fileCache.get(fullReqPath);
+        if (result) {
+          console.info("Serving from ram");
+        }
+        if (!result) {
+          console.info("Serving from disk");
+          result = await processFilesafely(fullReqPath);
+          fileCache.set(fullReqPath, result);
+        }
+        if (result.type === "text") {
+          let finalData = result.data as string;
           if (supportsScriptInjection(ext)) {
             const reloadScript = getReloadScript();
-            fileContent += reloadScript;
+            finalData += reloadScript;
+            console.info("reload script injected with", fullReqPath);
+          }
+          this.watcher?.add(fullReqPath);
+          const bodyBuffer = Buffer.from(finalData, "utf-8");
+          res.writeHead(200, {
+            "Content-Type": `${result.contentType}; charset=utf-8`,
+            "Content-Length": bodyBuffer.length,
+          });
+          res.end(bodyBuffer);
+        } else if (result.type === "binary") {
+          res.writeHead(200, {
+            "Content-Type": result.contentType || "application/octet-stream",
+            "Content-Length": result.size,
+          });
+
+          if (typeof (result.data as any).pipe === "function") {
+            try {
+              await pipeline(result.data as any, res);
+            } catch (err) {
+              console.error("Pipeline failed", err);
+              if (!res.writableEnded) {
+                res.destroy();
+              }
+            }
+          } else {
+            res.end(result.data);
           }
         }
-        res.writeHead(200, { "Content-type": getMimeType(ext) });
-        return res.end(fileContent);
       } catch (error) {
         const err = error as NodeJS.ErrnoException;
         console.error(err);
@@ -166,22 +210,23 @@ export class App implements vscode.Disposable {
         });
         const statusCode = getStatusCode(err.code);
         res.writeHead(statusCode, { "Content-Type": "text/html" });
-        const html = await getErrorPage(statusCode, err.message!);
+        const html = getErrorPage(statusCode, err.message!);
         return res.end(html);
       }
     });
 
     const relativePath = getRelativeFilePath(
-      currentFilePath || currentFolderPath
+      currentFilePath || currentFolderPath,
     );
-
+    console.info(proto);
     if (isPublicAccessEnabled()) {
-      const url = `http://${getLocalIP()}:${this.server?.port!.toString()}/`;
+      // const url = `https://${getLocalIP()}:${this.server?.port!.toString()}/`;
+      const url = `${proto}//${getLocalIP()}:${this.server?.port!.toString()}/`;
       LoggerEvents.emit(LogEventTypes.CONN_URI, { uri: url });
     }
 
     vscode.env.openExternal(
-      getConnectionURI(HOST.LOCALHOST, port, relativePath!)
+      getConnectionURI(proto, HOST.LOCALHOST, port, relativePath!),
     );
     // revert ui
     this.isRunning = true;

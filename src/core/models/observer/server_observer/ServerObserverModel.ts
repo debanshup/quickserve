@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
 import { ServerEvents, ServerEventTypes } from "./serverEventEmitter";
-import { Config } from "../../../utils/config";
-import { ERROR_MESSAGES } from "../../../consatnts/errorMessages";
-import { POP_UP_MESSAGE } from "../../../consatnts/pop-upMessage";
-import { StatusbarUI } from "../../../StatusBarUI";
+import { ERROR_MESSAGES } from "../../../../consatnts/errorMessages";
+import { POP_UP_MESSAGE } from "../../../../consatnts/pop-upMessage";
+import { StatusbarUI } from "../../../../StatusBarUI";
+import { Config } from "../../../../utils/config";
+ 
 
 const { getShowInfoMessages } = Config;
 export class ServerObserver {

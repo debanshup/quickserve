@@ -9,14 +9,19 @@ import {
 import path from "path";
 import { marked } from "marked";
 import fs from "fs";
-const UI_PATH = {
-  FILE_BROWSER_PAGE: path.join(__dirname, "../ui/dist/file-browser/index.html"),
-  ERROR_PAGE: path.join(__dirname, "../ui/dist/error/index.html"),
-};
+import * as fsPromise from "fs/promises";
 import { Config } from "./config";
 import { HOST } from "../consatnts/host";
 const { getHttpServerPort, isPublicAccessEnabled } = Config;
 import os from "os";
+import { PATH } from "../consatnts/path";
+// all text extension
+const ALL_TEXT_EXTS = new Set([
+  ...TEXT_EXTENSIONS,
+  ...MARKDOWN_EXTENSIONS,
+  ...SCRIPT_EXTENSIONS,
+  ...STYLE_EXTENSIONS,
+]);
 /**
  *
  * @returns ports available to use
@@ -28,7 +33,7 @@ export async function getAvailablePort() {
   const portNumbers = getPortModule.portNumbers;
   const defaultHTTPServerPort = getHttpServerPort();
   const httpServerPort = await getPort({
-    port: portNumbers(defaultHTTPServerPort!, defaultHTTPServerPort! + 100),
+    port: portNumbers(defaultHTTPServerPort!, 65535),
   });
   return httpServerPort;
 }
@@ -36,7 +41,7 @@ export async function getAvailablePort() {
 /**
  * Returns the appropriate host based on user setting.
  *
- * @returns {string} `'0.0.0.0'` if public access is enabled, otherwise `'localhost'`.
+ * @returns {string} `'0.0.0.0'` if public access is enabled, otherwise `127.0.0.1`.
  */
 export function getHost(): string {
   return isPublicAccessEnabled() ? HOST.LAN : HOST.LOCALHOST;
@@ -75,12 +80,13 @@ export function getLocalIP(): string {
  */
 
 export function getConnectionURI(
+  protocol: "https:" | "http:",
   ip: string,
   port: number | null,
-  relativePath: string
+  relativePath: string,
 ) {
   return vscode.Uri.parse(
-    `http://${ip}:${port}/${relativePath.replace(/\\/g, "/")}`
+    `${protocol}//${ip}:${port}/${relativePath.replace(/\\/g, "/")}`,
   );
 }
 
@@ -222,10 +228,7 @@ export function pathExists(path: string): boolean {
  * @param data - file data (string or Buffer)
  * @param ext - file extension
  */
-export async function getFileContent(
-  data: string | Buffer,
-  ext: string
-): Promise<string | null | Buffer<ArrayBufferLike>> {
+export function getFileContent(data: string | Buffer, ext: string) {
   const normalizedExt = ext.toLowerCase();
 
   if (
@@ -235,13 +238,54 @@ export async function getFileContent(
   ) {
     return data.toString("utf-8");
   } else if (MARKDOWN_EXTENSIONS.includes(normalizedExt)) {
-    return await marked(data.toString("utf-8"));
+    return marked.parse(data.toString("utf-8"), { async: false });
   } else if (BINARY_EXTENSIONS.includes(normalizedExt)) {
     // return raw for binary files
     return data;
   }
 
   return null;
+}
+
+export async function processFilesafely(filePath: string) {
+  const MAX_AST_PARSE_SIZE = 5 * 1024 * 1024; // 5 mb
+  const ext = path.extname(filePath).toLowerCase();
+  const isText = ALL_TEXT_EXTS.has(ext);
+  const encoding = (isText ? "utf-8" : undefined) as BufferEncoding | undefined;
+
+  const stats = await fsPromise.stat(filePath);
+  if (stats.size < MAX_AST_PARSE_SIZE) {
+    const data = await fsPromise.readFile(filePath, { encoding });
+    return {
+      type: isText ? "text" : "binary",
+      path: filePath,
+      size: stats.size,
+      data: data, // string if isText, Buffer if not
+      contentType: getMimeType(ext),
+    };
+  }
+  const stream = fs.createReadStream(filePath, { encoding });
+
+  if (isText) {
+    let textContent = "";
+    for await (const chunk of stream) {
+      textContent += chunk;
+    }
+    return {
+      type: "text",
+      data: textContent,
+      path: filePath,
+      size: stats.size,
+      contentType: getMimeType(ext),
+    };
+  }
+  return {
+    type: "binary",
+    data: stream, // Returning the stream itself for the consumer to handle
+    path: filePath,
+    size: stats.size,
+    contentType: getMimeType(ext),
+  };
 }
 
 /**
@@ -306,17 +350,48 @@ export function isFolder(path: fs.PathLike) {
 export function getReloadScript() {
   return `
     <script>
-      const proto = location.protocol === "https:" ? "wss" : "ws";
-      const ws = new WebSocket(\`\${proto}://\${location.host}\`);
+      (function() {
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(\`\${proto}://\${location.host}\`);
 
-      ws.onerror = (err) => console.log(err);
+        ws.onopen = () => console.log("[HMR] Connected to Dev Server");
+        ws.onerror = (err) => console.error("[HMR] WebSocket Error:", err);
 
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.action === "reload") {
-          location.reload();
-        }
-      };
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            
+            if (msg.action === "reload") {
+              console.log("[HMR] Full reload triggered.");
+              location.reload();
+            } 
+            else if (msg.action === "inject") {
+              console.log("[HMR] Hot injecting changes...");
+              
+              // 1. Hot Swap the Body
+              if (msg.body !== undefined) {
+                document.body.innerHTML = msg.body;
+              }
+
+              // 2. Hot Swap the Styles
+              if (msg.style !== undefined) {
+                let styleTag = document.getElementById("hmr-injected-styles");
+                
+                // Create the style tag if it's the first time injecting
+                if (!styleTag) {
+                  styleTag = document.createElement("style");
+                  styleTag.id = "hmr-injected-styles";
+                  document.head.appendChild(styleTag);
+                }
+                
+                styleTag.innerHTML = msg.style;
+              }
+            }
+          } catch (e) {
+            console.error("[HMR] Failed to process message:", e);
+          }
+        };
+      })();
     </script>
   `;
 }
@@ -342,40 +417,33 @@ export function getStatusCode(errorCode?: string): number {
 }
 
 /**
- * @unused
- * @returns full path of ui file
- */
-export function getFileBrowserUiPath() {
-  return path.join(__dirname, UI_PATH.FILE_BROWSER_PAGE);
-}
-
-/**
  * Asynchronously loads the file browser UI HTML, injecting runtime values for port, file tree, and root path.
  *
  * @param port - The HTTP server port to be injected into the UI.
  * @param fullPath - The root directory path to be displayed in the file browser.
  * @param file_tree - An array representing the file tree structure to be rendered in the UI.
- * @returns A Promise that resolves to the HTML string of the file browser UI with injected values.
+ * @returns HTML string of the file browser UI with injected values.
  *
  * The method reads the file browser HTML template, replaces placeholders (__PORT__, __FILE_TREE__, __ROOT__)
  * with the provided runtime values, and returns the resulting HTML string.
  */
-export async function getFileBrowserUi(
+export function getFileBrowserUi(
   port: number,
   fullPath: string,
-  file_tree: any[]
+  file_tree: any[],
 ) {
-  const fileBrowserPath = path.join(UI_PATH.FILE_BROWSER_PAGE);
-  const data = await fs.promises.readFile(fileBrowserPath, "utf-8");
+  const fileBrowserPath = path.join(__dirname, PATH.FILE_BROWSER_PAGE);
+  const data = fs.readFileSync(fileBrowserPath, "utf-8");
   return data
     .replace(/__PORT__/g, port.toString())
     .replace(/__FILE_TREE__/g, JSON.stringify(file_tree))
     .replace(/__ROOT__/g, fullPath);
 }
 
-export async function getErrorPage(statusCode: number, stack: string) {
-  const errorPath = path.join(UI_PATH.ERROR_PAGE);
-  const data = await fs.promises.readFile(errorPath, "utf-8");
+export function getErrorPage(statusCode: number, stack: string) {
+  const errorPath = path.join(__dirname, PATH.ERROR_PAGE);
+  // console.info("error_page_path", path);
+  const data = fs.readFileSync(errorPath, "utf-8");
   return data
     .replace(/__STATUS_CODE__/g, statusCode.toString())
     .replace(/__STACK__/g, stack);
