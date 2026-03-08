@@ -1,5 +1,5 @@
 export type Node = {
-  file: string;
+  // file: string;
   imports: Set<string>;
   importers: Set<string>;
 };
