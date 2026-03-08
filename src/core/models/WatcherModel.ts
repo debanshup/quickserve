@@ -7,8 +7,21 @@ import {
 } from "./observer/log_observer/logEventEmitter";
 import { readFile } from "fs/promises";
 import { HmrAnalyzer } from "../HMR/HmrAnalyzer";
-import { processFilesafely } from "../../utils/helper";
+import {
+  getCurrentDir,
+  getRelativeFilePath,
+  processFilesafely,
+} from "../../utils/helper";
 import { fileCache } from "../../cache/FileCache";
+import { graph } from "../dependency-manager/DependencyGraph";
+import path from "path";
+import {
+  SCRIPT_EXTENSIONS,
+  STYLE_EXTENSIONS,
+} from "../../consatnts/supported-extension";
+
+import { DependencyGraph } from "../dependency-manager/DependencyGraph";
+
 export class FileWatcher {
   private watcher?: chokidar.FSWatcher;
   private wsServer?: WebSocketServer;
@@ -31,7 +44,7 @@ export class FileWatcher {
    * add a file in watcher
    * @returns void
    */
-  add(file: string): void {
+  add(file: string | string[]): void {
     this.watcher?.add(file);
   }
 
@@ -45,60 +58,100 @@ export class FileWatcher {
       awaitWriteFinish: false,
       persistent: true,
     });
-    const hmrAnalyzer = new HmrAnalyzer();
-    this.watcher.on("change", async (path) => {
-      let result;
-      const newContent = await processFilesafely(path);
-      fileCache.set(path, newContent);
-      if (
-        path.toLowerCase().endsWith(".html") ||
-        path.toLowerCase().endsWith(".htm")
-      ) {
-        result = hmrAnalyzer.analyze(newContent.data as string);
-      }
-      // console.info("RESULT::",result);
-      if (result.action !== "none") {
-        this.wsServer?.clients.forEach((ws) => {
-          ws.send(JSON.stringify(result!));
-        });
-      }
 
-      // const end = performance.now();`
-      // console.log("Reload trigger time:", end - start, "ms");
+    const hmrAnalyzer = new HmrAnalyzer();
+    this.watcher.on("change", async (filePath) => {
+      console.info("watched file", this.watcher!.getWatched());
+      try {
+        const resolvedFilePath = path.resolve(filePath);
+        const newContent = await processFilesafely(filePath);
+        fileCache.set(filePath, newContent);
+        if (!newContent) {
+        }
+        if (newContent?.type !== "text") {
+          // console.log(` AST parse for binary/large file: ${filePath}`);
+          return;
+        }
+
+        console.info(resolvedFilePath);
+
+        const ext = path.extname(filePath).toLowerCase();
+
+        const textData = newContent.data as string;
+
+        let result = { action: "none" } as Partial<any>;
+
+        if (ext === ".html" || ext === ".htm") {
+          result = hmrAnalyzer.analyzeHTML(textData);
+        } else if (STYLE_EXTENSIONS.includes(ext)) {
+          /**
+           *@improve :: add HMR
+           */
+          // console.info("Relative path:", getRelativeFilePath(filePath));
+          result = {
+            action: "css-update",
+            path: "/" + getRelativeFilePath(filePath),
+          };
+        } else if (SCRIPT_EXTENSIONS.includes(ext)) {
+          result = { action: "reload" };
+        } else if (ext === ".md") {
+          result = { action: "reload" };
+        }
+
+        let node = graph.getNode(filePath);
+        if (node) {
+          console.info("Updating existing node...");
+          graph.updateNode(filePath, {
+            ...node,
+            imports: new Set(graph.extractImports(filePath, textData)),
+          });
+          // console.info(node);
+        } else {
+          // fallback
+          node = graph.createNode(filePath, textData)!;
+        }
+        this.watcher?.add([...node.imports]);
+        // console.info("new watched file", this.watcher!.getWatched());
+        // console.info("result::", result);
+
+        if (result && result.action !== "none") {
+          this.wsServer?.clients.forEach((ws) => {
+            const importer = path.resolve(getCurrentDir()! + (ws as any).page);
+            // console.info(graph.getNode(importer)?.imports);
+            if (
+              resolvedFilePath === importer ||
+              DependencyGraph.hasDeepImport(graph, importer, resolvedFilePath)
+            ) {
+              console.info("sending message");
+              ws.send(JSON.stringify(result));
+            }
+          });
+        }
+      } catch (error) {
+        console.error(`Watcher Error processing ${filePath}:`, error);
+      }
     });
-    this.watcher.on("add", (path) => {
-      LoggerEvents.emit(LogEventTypes.INFO, { msg: `Watching ${path}` });
+    this.watcher.on("add", (filePath) => {
+      LoggerEvents.emit(LogEventTypes.INFO, { msg: `Watching ${filePath}` });
+    });
+    this.watcher.on("unlink", (filePath) => {
+      /**
+       * @todo:: test
+       */
+      const isDeleted = graph.deleteNode(filePath);
+      console.info("deleting ", filePath, isDeleted);
+    });
+
+    this.watcher.on("error", (err) => {
+      console.info(err);
     });
     this.on = true;
   }
+
   async stop(): Promise<void> {
     if (this.watcher && this.on) {
       await this.watcher?.close();
       this.on = false;
     }
-  }
-
-  /**
-   * Performs surgical cleanup on the Dependency Graph (experimental)
-   */
-  private handleIncrementalUpdate(changedFile: string) {
-    // 1. Delete from your in-memory file cache (so the next HTTP request reads fresh from disk)
-    // myCache.delete(changedFile);
-    // 2. Get the node from your Dependency Graph
-    // const node = this.graph.getNode(changedFile);
-    // if (node) {
-    // 3. Sever FORWARD ties (What this file imports)
-    // Why? Because the developer might have deleted an `import "style.css"` line.
-    // We clear them now. They will be rebuilt automatically when the browser
-    // requests this file again and triggers your HTTP middleware parser.
-    // Example logic:
-    // node.imports.forEach(importedFile => {
-    //    const importedNode = this.graph.getNode(importedFile);
-    //    if (importedNode) {
-    //       importedNode.importedBy.delete(changedFile); // Remove reverse tie from the child
-    //    }
-    // });
-    // node.imports.clear();
-    // }
   }
 }
