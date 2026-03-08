@@ -5,9 +5,9 @@ import { LogLevel, log, logger } from "./logger";
 
 export class LogObserver {
   constructor() {
-    LoggerEvents.on(CONN_URI, ({ uri }) => {
+    LoggerEvents.on(CONN_URI, ({ url }) => {
       logger.info(
-        `${"Available on local network →"} ${uri}\n${"Use this URI in a browser on another device to connect."}`
+        `${"Available on local network →"} ${url}\n${"Use this URI in a browser on another device to connect."}`
       );
     });
     LoggerEvents.on(HTTP_REQ, ({ method, url }) => {

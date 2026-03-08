@@ -4,7 +4,6 @@ import { ERROR_MESSAGES } from "../../../../consatnts/errorMessages";
 import { POP_UP_MESSAGE } from "../../../../consatnts/pop-upMessage";
 import { StatusbarUI } from "../../../../StatusBarUI";
 import { Config } from "../../../../utils/config";
- 
 
 const { getShowInfoMessages } = Config;
 export class ServerObserver {
@@ -23,7 +22,7 @@ export class ServerObserver {
   private onStart(port: number | any) {
     if (getShowInfoMessages()) {
       vscode.window.showInformationMessage(
-        POP_UP_MESSAGE.SERVER_STARTED.replace(/__PORT__/g, port)
+        POP_UP_MESSAGE.SERVER_STARTED.replace(/__PORT__/g, port),
       );
     }
     StatusbarUI.kill(port);
@@ -39,7 +38,7 @@ export class ServerObserver {
   }
   private onError(error: Error) {
     vscode.window.showErrorMessage(
-      `${POP_UP_MESSAGE.SERVER_ERROR}: ${error.message}`
+      `${POP_UP_MESSAGE.SERVER_ERROR}: ${error.message}`,
     );
     StatusbarUI.run();
   }
