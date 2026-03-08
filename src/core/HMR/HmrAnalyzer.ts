@@ -1,4 +1,5 @@
 import { parse, HTMLElement } from "node-html-parser";
+import css from "css";
 
 export class HmrAnalyzer {
   private previousHtml: string = "";
@@ -7,7 +8,7 @@ export class HmrAnalyzer {
    * Analyzes the new HTML content and determines the HMR action.
    * @param newHtml The raw string content of the newly saved HTML file
    */
-  public analyze(newHtml: string) {
+  public analyzeHTML(newHtml: string) {
     // First run: No previous HTML to compare against
     if (!this.previousHtml) {
       console.info("FIRST TIME CHANGE");
@@ -67,7 +68,7 @@ export class HmrAnalyzer {
 
     // DECISION LOGIC
     if (oldStructure !== newStructure) {
-      // Something outside the body/styles changed  
+      // Something outside the body/styles changed
       return { action: "reload" };
     }
 
@@ -91,7 +92,7 @@ export class HmrAnalyzer {
     // Nothing meaningful changed (e.g., the user just hit save without editing)
     return { action: "none" };
   }
-
+  
   /**
    * Mutates the AST to remove nodes we handle via Hot Injection.
    */
