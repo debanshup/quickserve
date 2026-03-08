@@ -17,9 +17,9 @@
     "onStartupFinished"
   ],
   "repository": {
-    "url": "https://github.com/debanshup/quickserve"
+    "url": "git+https://github.com/debanshup/quickserve.git"
   },
-  "main": "./dist/extension.js",
+  "main": "dist/extension.js",
   "contributes": {
     "commands": [
       {
@@ -73,6 +73,11 @@
           "type": "boolean",
           "default": true,
           "description": "Display status messages such as 'Server Started', 'Server Stopped', and other server events."
+        },
+        "quickserve.showServerStatusOnStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically show the QuickServe server status output channel when the server starts."
         }
       }
     }
@@ -97,6 +102,7 @@
     "@types/css": "^0.0.38",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/qrcode-terminal": "^0.12.2",
     "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.100.0",
     "@types/ws": "^8.18.1",
@@ -119,6 +125,7 @@
     "get-port": "^7.1.0",
     "marked": "^15.0.11",
     "node-html-parser": "^7.0.2",
+    "qrcode-terminal": "^0.12.0",
     "selfsigned": "^5.5.0",
     "ws": "^8.18.2"
   },
@@ -130,9 +137,11 @@
     "quick",
     "web"
   ],
-  "author": {
-    "name": "Debanshu Panigrahi",
-    "email": "debanshupanigrahi@gmail.com"
+  "author": "Debanshu Panigrahi <debanshupanigrahi@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/debanshup/quickserve/issues"
   },
-  "license": "ISC"
+  "homepage": "https://github.com/debanshup/quickserve#readme",
+  "type": "commonjs"
 }
