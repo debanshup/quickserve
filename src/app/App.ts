@@ -7,7 +7,6 @@ import { HOST } from "../consatnts/host";
 import { ServerObserver } from "../core/models/observer/server_observer/ServerObserverModel";
 import { LogObserver } from "../core/models/observer/log_observer/LogObserverModel";
 
-import parse from "node-html-parser";
 import { pipeline } from "stream/promises";
 import {
   LoggerEvents,
@@ -39,18 +38,26 @@ import {
 } from "../utils/helper";
 import path from "path";
 import { fileCache } from "../cache/FileCache";
-const { getAutoReloadEnabled, isPublicAccessEnabled } = Config;
+import { graph } from "../core/dependency-manager/DependencyGraph";
+import { StatusObserver } from "../core/models/observer/status_observer/StatusObserverModel";
+import {
+  StatusEvents,
+  StatusEventTypes,
+} from "../core/models/observer/status_observer/StatusEventEmitter";
+const { getAutoReloadEnabled, getPublicAccessEnabled } = Config;
 
 export class App implements vscode.Disposable {
   public isRunning: boolean = false;
   private server: Server | null = null;
   private watcher: FileWatcher | null = null;
+  private publicUrl: string = "";
   /**
    * @constructor
    */
   constructor() {
     new ServerObserver();
     new LogObserver();
+    new StatusObserver();
     StatusbarUI.init();
     this.isRunning = false;
   }
@@ -129,10 +136,7 @@ export class App implements vscode.Disposable {
       });
 
       try {
-        /**
-         * @fix for request path
-         */
-        console.info("REQ URL::", req.url);
+        // console.info("REQ URL::", req.url);
         const parsedUrl = new URL(
           req.url!,
           `http://${req.headers.host || "localhost"}`,
@@ -141,7 +145,7 @@ export class App implements vscode.Disposable {
         if (pathname.startsWith("/")) {
           pathname = pathname.slice(1);
         }
-        
+
         const fullReqPath = path.join(currentFolderPath, pathname);
 
         if (!fullReqPath.startsWith(currentFolderPath)) {
@@ -158,6 +162,7 @@ export class App implements vscode.Disposable {
           res.writeHead(200, { "Content-Type": "text/html" });
           return res.end(html);
         }
+
         const ext = getFileExtension(req.url!);
 
         let result = fileCache.get(fullReqPath);
@@ -169,21 +174,31 @@ export class App implements vscode.Disposable {
           result = await processFilesafely(fullReqPath);
           fileCache.set(fullReqPath, result);
         }
-        if (result.type === "text") {
+
+        if (result?.type === "text") {
           let finalData = result.data as string;
+          if (!graph.isNodeAvailable(fullReqPath)) {
+            console.info("Node not available, creating node");
+            // graph.createNode(fullReqPath, finalData);
+            graph.build(fullReqPath);
+
+            // const maps
+            console.info("Files::", graph.getAllNodes());
+            this.watcher?.add(graph.getAllNodes());
+            // this.watcher?.add(fullReqPath);
+          }
           if (supportsScriptInjection(ext)) {
             const reloadScript = getReloadScript();
             finalData += reloadScript;
             console.info("reload script injected with", fullReqPath);
           }
-          this.watcher?.add(fullReqPath);
           const bodyBuffer = Buffer.from(finalData, "utf-8");
           res.writeHead(200, {
             "Content-Type": `${result.contentType}; charset=utf-8`,
             "Content-Length": bodyBuffer.length,
           });
           res.end(bodyBuffer);
-        } else if (result.type === "binary") {
+        } else if (result?.type === "binary") {
           res.writeHead(200, {
             "Content-Type": result.contentType || "application/octet-stream",
             "Content-Length": result.size,
@@ -203,8 +218,9 @@ export class App implements vscode.Disposable {
           }
         }
       } catch (error) {
+        console.error(error);
         const err = error as NodeJS.ErrnoException;
-        console.error(err);
+        // console.error("ERROR STACK::", err.stack);
         LoggerEvents.emit(LogEventTypes.ERROR, {
           error: error as Error,
         });
@@ -218,16 +234,33 @@ export class App implements vscode.Disposable {
     const relativePath = getRelativeFilePath(
       currentFilePath || currentFolderPath,
     );
-    console.info(proto);
-    if (isPublicAccessEnabled()) {
-      // const url = `https://${getLocalIP()}:${this.server?.port!.toString()}/`;
-      const url = `${proto}//${getLocalIP()}:${this.server?.port!.toString()}/`;
-      LoggerEvents.emit(LogEventTypes.CONN_URI, { uri: url });
+    const isPublicAccessEnabled = getPublicAccessEnabled();
+    if (isPublicAccessEnabled) {
+      this.publicUrl = `${proto}//${getLocalIP()}:${this.server?.port!.toString()}/`;
+      LoggerEvents.emit(LogEventTypes.CONN_URI, { url: this.publicUrl });
     }
 
+    StatusEvents.emit(StatusEventTypes.START, {
+      on: server.on,
+      port: this.server?.port,
+      isPublicAccessEnabled,
+      publicUrl: this.publicUrl,
+    });
+
+    /**
+     * @debug
+     */
+    // vscode.env.openExternal(
+    //   getConnectionURI(proto, "localhost:", port, relativePath!),
+    // );
     vscode.env.openExternal(
       getConnectionURI(proto, HOST.LOCALHOST, port, relativePath!),
     );
+    // show status if applicable
+    if (Config.getshowServerStatusOnStart()) {
+      StatusEvents.emit(StatusEventTypes.SHOW);
+    }
+
     // revert ui
     this.isRunning = true;
   }
@@ -242,6 +275,7 @@ export class App implements vscode.Disposable {
     console.timeEnd("stop");
     this.isRunning = false;
     this.clearApp();
+    StatusEvents.emit(StatusEventTypes.STOP);
   }
 
   public async dispose() {
