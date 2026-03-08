@@ -5,9 +5,59 @@ import { parse as parseHtml } from "node-html-parser";
 import fs from "fs";
 import { Node } from "../../Types";
 import path from "path";
-export default class DependencyGraph {
+import { CORE_MODULES } from "../../consatnts/coreModules";
+import {
+  SCRIPT_EXTENSIONS,
+  STYLE_EXTENSIONS,
+} from "../../consatnts/supported-extension";
+
+export class DependencyGraph {
+  // [x: string]: any;
   private graph: Map<string, Node> = new Map();
   private visited: Set<string> = new Set();
+
+  /**
+   *
+   *@test for circular dependency
+   */
+  static hasDeepImport(
+    graph: DependencyGraph,
+    start: string,
+    target: string,
+  ): boolean {
+    const stack = [start];
+    const visited = new Set<string>();
+
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      console.log(`Checking: ${current} -> searching for ${target}`);
+
+      if (visited.has(current)) {
+        continue;
+      }
+      visited.add(current);
+
+      const node = graph.getNode(current);
+      if (!node) {
+        continue;
+      }
+
+      if (node.imports.has(target)) {
+        console.warn(
+          `Circular Dependency Found: ${target} is imported by ${current}`,
+        );
+        return true;
+      }
+
+      for (const dep of node.imports) {
+        if (!visited.has(dep)) {
+          stack.push(dep); // ***replaces recursive call***
+        }
+      }
+    }
+
+    return false;
+  }
   /**
    * Resolves relative paths like './App' to '/User/project/src/App.tsx'
    */
@@ -44,10 +94,11 @@ export default class DependencyGraph {
     return null;
   }
   public build(entry: string) {
+    this.visited.clear();
     const resolvedPath = path.resolve(entry);
     this.processFile(resolvedPath);
-    const graph = this.graph.get(resolvedPath);
-    return graph;
+    // const graph = this.graph.get(resolvedPath);
+    // return graph;
   }
   private processFile(resolvedPath: string) {
     // avoid cycle
@@ -55,12 +106,16 @@ export default class DependencyGraph {
       return;
     }
 
+    // fix: infinite loop
+
+    this.visited.add(resolvedPath);
+
     // init node in graph
     // console.info(resolvedPath);
 
     if (!this.graph.has(resolvedPath)) {
       this.graph.set(resolvedPath, {
-        file: resolvedPath,
+        // file: resolvedPath,
         imports: new Set(),
         importers: new Set(),
       });
@@ -81,18 +136,15 @@ export default class DependencyGraph {
       } else if (ext === ".css") {
         dependencies = this.extractCssDeps(content);
       } else if ([".js", ".mjs", ".ts", ".tsx"].includes(ext)) {
-        dependencies = this.extractScriptDeps(content, ext);
+        dependencies = this.extractScriptDeps(content);
       }
     } catch (error) {
       console.error(`Error parsing ${resolvedPath}:`, error);
     }
 
     // track built in modules to ignore
-    // const CORE_MODULES = new Set(builtinModules);
-
     // process deps
     dependencies.forEach((relPath) => {
-      // console.info(relPath);
       const absPath = this.resolveModulePath(dir, relPath);
       // console.info(absPath);
       if (absPath) {
@@ -106,14 +158,14 @@ export default class DependencyGraph {
   private addEdge(parent: string, child: string) {
     if (!this.graph.has(parent)) {
       this.graph.set(parent, {
-        file: parent,
+        // file: parent,
         imports: new Set(),
         importers: new Set(),
       });
     }
     if (!this.graph.has(child)) {
       this.graph.set(child, {
-        file: parent,
+        // file: parent,
         imports: new Set(),
         importers: new Set(),
       });
@@ -171,65 +223,91 @@ export default class DependencyGraph {
     });
     return deps;
   }
-  private extractScriptDeps(content: string, ext?: string) {
+  private extractScriptDeps(content: string) {
     const deps: string[] = [];
 
-    // Configure Acorn for TS/ESM
     const parserOptions: acorn.Options = {
       sourceType: "module",
-      ecmaVersion: 2020,
-      // Note: Acorn doesn't natively support TS syntax (types).
-      // For pure TS files, we use a trick: standard imports usually parse fine
-      // if we ignore type errors, or we use a regex fallback for complex TS.
+      ecmaVersion: "latest",
     };
 
     try {
       const ast = acorn.parse(content, parserOptions);
 
       walk.simple(ast, {
-        // import x from './file'
         ImportDeclaration(node: any) {
           if (node.source && node.source.value) {
             deps.push(node.source.value);
           }
         },
-        // export { x } from './file'
         ExportNamedDeclaration(node: any) {
           if (node.source && node.source.value) {
             deps.push(node.source.value);
           }
         },
-        // export * from './file'
         ExportAllDeclaration(node: any) {
           if (node.source && node.source.value) {
             deps.push(node.source.value);
           }
         },
+        CallExpression(node: any) {
+          const isRequire = node.callee.name === "require";
+          const isDynamicImport = node.callee.type === "Import";
+          if (
+            (isRequire || isDynamicImport) &&
+            node.arguments[0]?.type === "Literal"
+          ) {
+            // console.info("Got:: require / dynamic import");
+            deps.push(node.arguments[0].value);
+          }
+        },
       });
     } catch (e) {
-      // Fallback for TS files that Acorn chokes on (because of type syntax)
-      // Simple regex to catch imports in TS files
-      const importRegex = /import\s+.*?\s+from\s+['"](.*?)['"]/g;
-      let match;
-      while ((match = importRegex.exec(content)) !== null) {
-        deps.push(match[1]);
+      // FALLBACK: Acorn failed (likely TS syntax)
+      const matchers = [
+        /import\s+(?:type\s+)?(?:.*?\s+from\s+)?['"](.*?)['"]/g,
+        /export\s+(?:type\s+)?(?:.*?\s+from\s+)?['"](.*?)['"]/g, // export { Button } from './Button';
+        /(?:require|import)\s*\(\s*['"](.*?)['"]\s*\)/g,
+      ];
+
+      for (const regex of matchers) {
+        let match;
+        while ((match = regex.exec(content)) !== null) {
+          if (match[1]) {
+            deps.push(match[1]);
+          }
+        }
       }
     }
 
-    return deps;
+    const localDeps: string[] = [];
+
+    for (const dep of deps) {
+      if (CORE_MODULES.has(dep) || dep.startsWith("node:")) {
+        continue;
+      }
+      if (dep.startsWith("http://") || dep.startsWith("https://")) {
+        continue;
+      }
+      if (dep.startsWith(".") || dep.startsWith("/")) {
+        localDeps.push(dep);
+      }
+    }
+
+    return [...new Set(localDeps)];
   }
 
-  extractImports(content: string, filePath: string) {
+  extractImports(filePath: string, content: string) {
     const ext = path.extname(filePath).toLowerCase();
     const dir = path.dirname(filePath);
 
     let rawImports: string[] = [];
 
-    if (ext === ".html") {
+    if (ext === ".html" || ext === ".htm") {
       rawImports = this.extractHtmlDeps(content);
-    } else if (ext === ".css") {
+    } else if (STYLE_EXTENSIONS.includes(ext)) {
       rawImports = this.extractCssDeps(content);
-    } else if ([".js", ".ts", ".jsx", ".tsx", ".mjs"].includes(ext)) {
+    } else if (SCRIPT_EXTENSIONS.includes(ext)) {
       rawImports = this.extractScriptDeps(content);
     }
 
@@ -245,11 +323,6 @@ export default class DependencyGraph {
       ) {
         continue;
       }
-
-      // Ignore Node built-ins ('fs', 'path', 'node:fs')
-      // if (CORE_MODULES.has(rawPath) || rawPath.startsWith('node:')) {
-      //   continue;
-      // }
 
       // Ignore NPM packages (Bare specifiers don't start with '.' or '/')
       const isLocalFile = rawPath.startsWith(".") || rawPath.startsWith("/");
@@ -268,67 +341,91 @@ export default class DependencyGraph {
     return [...new Set(resolvedDependencies)];
   }
 
-  public updateNode(filePath: string, newDeps: string[]) {
-    if (!this.graph.has(filePath)) {
-      this.graph.set(filePath, {
-        file: filePath,
-        imports: new Set(),
-        importers: new Set(),
-      });
-    }
-
-    const node = this.graph.get(filePath);
-    if (!node) {
-      return;
-    }
-    const oldDeps = node?.imports!;
-    const newDepsSet = new Set(newDeps);
-    oldDeps.forEach((oldDep) => {
-      if (!newDepsSet.has(oldDep)) {
-        console.log(
-          `Severing tie: ${path.basename(filePath)} no longer imports ${path.basename(oldDep)}`,
-        );
-
-        // Remove the reverse link from the child
-        const childNode = this.graph.get(oldDep);
-        if (childNode) {
-          childNode.importers.delete(filePath);
-
-          // Optional Memory Cleanup: If the child is now completely orphaned, delete it
-          if (childNode.imports.size === 0 && childNode.imports.size === 0) {
-            this.graph.delete(oldDep);
-          }
-        }
-      }
-    });
-
-    newDepsSet.forEach((newDep) => {
-      if (!oldDeps.has(newDep)) {
-        console.log(
-          `Adding tie: ${path.basename(filePath)} now imports ${path.basename(newDep)}`,
-        );
-        if (!this.graph.has(newDep)) {
-          this.graph.set(newDep, {
-            file: newDep,
-            imports: new Set(),
-            importers: new Set(),
-          });
-        }
-      }
-    });
-
-    node!.imports = newDepsSet;
+  isNodeAvailable(filePath: string) {
+    const resolvedPath = path.resolve(filePath);
+    return this.graph.has(resolvedPath);
   }
 
-  public getGraph(path: string) {
-    this.build(path);
+  /**
+   *
+   * @param filePath
+   * @param newNode
+   * @description -- use this function to update node of a existing graph
+   *
+   *
+   * @returns
+   */
+  public updateNode(filePath: string, newNode: Node) {
+    const resolvedPath = path.resolve(filePath);
+    console.info(resolvedPath);
+    if (!this.graph.has(resolvedPath)) {
+      console.warn("Node not found");
+      return;
+    }
+    const existingNode = this.graph.get(resolvedPath)!;
+    if (newNode.imports) {
+      existingNode.imports = newNode.imports;
+    }
+    if (newNode.importers) {
+      existingNode.importers = newNode.importers;
+    }
 
-    return this.graph.get(path);
-    // if (this.graph.has(path)) {
-    // } else {
-    //   new Map();
-    // }
-    // return this.graph
+    // console.info("Updated node:", newNode);
+  }
+
+  /**
+   * @todo redefine
+   */
+
+  public getGraph(path: string) {
+    return this.build(path);
+  }
+
+  public getAllNodes() {
+    return [...this.graph.keys()];
+  }
+  /**
+   * @todo redefine
+   */
+  public getNode(filePath: string) {
+    const resolvedPath = path.resolve(filePath);
+    return this.graph.get(resolvedPath);
+  }
+
+  createNode(filePath: string, content: string) {
+    const resolvedPath = path.resolve(filePath);
+    // console.info(path.resolve(resolvedPath))
+    // console.info(resolvedPath);
+    const extractedImports = this.extractImports(resolvedPath, content);
+    // console.info(extractedImports);
+    if (!this.graph.has(resolvedPath)) {
+      this.graph.set(resolvedPath, {
+        imports: new Set(extractedImports),
+        importers: new Set(),
+      });
+    } else {
+      this.graph.get(resolvedPath)!.imports = new Set(extractedImports);
+    }
+
+    for (const importedPath of extractedImports) {
+      if (!this.graph.has(importedPath)) {
+        this.graph.set(importedPath, {
+          imports: new Set(),
+          importers: new Set(),
+        });
+      }
+
+      this.graph.get(importedPath)!.importers.add(resolvedPath);
+    }
+
+    return this.graph.get(resolvedPath);
+  }
+  /**
+   * @todo redefine
+   */
+  public deleteNode(filePath: string) {
+    const resolvedPath = path.resolve(filePath);
+    return this.graph.delete(resolvedPath);
   }
 
   // ---- Debug ------
@@ -366,9 +463,4 @@ export default class DependencyGraph {
     }
   }
 }
-
-// const graph = new DependencyGraph();
-// const node = graph.build("F://demo_ext_test/index1.html");
-// console.info(graph);
-
-// graph.printGraph();
+export const graph = new DependencyGraph();
