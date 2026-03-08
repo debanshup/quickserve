@@ -2,9 +2,9 @@ import { homedir } from "os";
 import path from "path";
 
 export const PATH = {
-  // ---------- ssl config ------------
+  //--------- ssl conig ------------
   CERT_DIR: path.join(homedir(), ".quickserve"),
-  // ------------ ui -------------
+  // ---------- ui -----------------
   FILE_BROWSER_PAGE: "../ui/dist/file-browser/index.html",
   ERROR_PAGE: "../ui/dist/error/index.html",
 };
