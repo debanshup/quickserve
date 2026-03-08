@@ -1,10 +1,8 @@
 "use strict";
-import { Performance } from "perf_hooks";
 import { WebSocketServer } from "ws";
 import * as http from "http";
 import * as https from "https";
 import { Socket } from "net";
-import fs from "fs";
 import {
   ServerEventTypes,
   ServerEvents,
@@ -13,12 +11,9 @@ import {
   LogEventTypes,
   LoggerEvents,
 } from "./observer/log_observer/logEventEmitter";
-import path from "path";
- 
-import selfsigned from "selfsigned";
-import { createPrivateKey, createPublicKey, X509Certificate } from "crypto";
+
 import { ERROR_MESSAGES } from "../../consatnts/errorMessages";
-import { PATH } from "../../consatnts/path";
+import { CertManager } from "../certificate-manager/CertManager";
 export class Server {
   wsServer: WebSocketServer | undefined;
   on: boolean = false;
@@ -27,114 +22,6 @@ export class Server {
   private hostname: string | undefined;
   private connections = new Set<Socket>();
   private startTime = performance.now();
-
-  private static isCertValid(certPath: string, keyPath: string) {
-    try {
-      const certPem = fs.readFileSync(certPath);
-      const keyPem = fs.readFileSync(keyPath);
-      const cert = new X509Certificate(certPem);
-      const expiry = new Date(cert.validTo);
-      if (expiry <= new Date()) {
-        return { status: false, msg: ERROR_MESSAGES.CERT_EXPIRED };
-      }
-
-      const certPublicKey = cert.publicKey.export({
-        type: "spki",
-        format: "pem",
-      });
-      const privateKey = createPrivateKey(keyPem);
-      const derivedPublicKey = createPublicKey(privateKey).export({
-        type: "spki",
-        format: "pem",
-      });
-
-      if (certPublicKey !== derivedPublicKey) {
-        return {
-          status: false,
-          msg: ERROR_MESSAGES.CERT_BINDING_ERROR,
-        };
-      }
-
-      return { status: true, msg: "Certificate is valid." };
-    } catch (error) {
-      return { status: false, msg: ERROR_MESSAGES.CERT_FORMAT_ERROR};
-    }
-  }
-
-  private static async getCert(sslConfig: {
-    certPath: string;
-    keyPath: string;
-  }) {
-    const certDir = PATH.CERT_DIR;
-    if (!fs.existsSync(certDir)) {
-      fs.mkdirSync(certDir);
-    }
-    let certPath;
-    let keyPath;
-
-    const isCustomConfig = sslConfig?.certPath && sslConfig?.keyPath;
-    const isPartialConfig =
-      (sslConfig?.certPath && !sslConfig?.keyPath) ||
-      (!sslConfig?.certPath && sslConfig?.keyPath);
-    if (isCustomConfig) {
-      certPath = sslConfig.certPath;
-      keyPath = sslConfig.keyPath;
-      const { status, msg } = Server.isCertValid(certPath, keyPath);
-      if (status === false) {
-        throw Error(msg);
-      }
-      return { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
-    } else {
-      if (isPartialConfig) {
-        throw new Error(ERROR_MESSAGES.SSL_CONFIG_ERROR);
-      }
-      console.info("No custom SSL config provided, using defaults.");
-      certPath = path.join(certDir, "cert.pem");
-      keyPath = path.join(certDir, "key.pem");
-      const { status, msg } = Server.isCertValid(certPath, keyPath);
-      console.info(msg);
-      if (status === true) {
-        return {
-          cert: fs.readFileSync(certPath),
-          key: fs.readFileSync(keyPath),
-        };
-      } else {
-        const pems = await selfsigned.generate(
-          [{ name: "commonName", value: "localhost" }],
-          {
-            extensions: [
-              {
-                name: "basicConstraints",
-                cA: false,
-              },
-              // EKU
-              {
-                name: "extKeyUsage",
-                serverAuth: true,
-              },
-              {
-                name: "keyUsage",
-                digitalSignature: true,
-                keyEncipherment: true,
-              },
-              {
-                name: "subjectAltName",
-                altNames: [
-                  { type: 2, value: "localhost" }, // DNS
-                  { type: 7, ip: "127.0.0.1" }, // IPv4
-                  { type: 7, ip: "::1" }, // IPv6
-                ],
-              },
-            ],
-          },
-        );
-
-        fs.writeFileSync(certPath, pems.cert);
-        fs.writeFileSync(keyPath, pems.private);
-        return { cert: pems.cert, key: pems.private };
-      }
-    }
-  }
 
   static async create(
     hostname: string,
@@ -145,7 +32,7 @@ export class Server {
     let server: http.Server | https.Server;
 
     if (protocol === "https:") {
-      const { cert, key } = await Server.getCert(sslConfig);
+      const { cert, key } = await CertManager.getCert(sslConfig);
       server = https.createServer({
         cert,
         key,
@@ -211,7 +98,13 @@ export class Server {
           resolve();
         });
 
-        this.wsServer!.on("connection", (ws) => {
+        this.wsServer!.on("connection", (ws, req) => {
+          // console.info("req url::", req.url);
+          const url = new URL(req.url!, "http://localhost");
+          const page = url.searchParams.get("page");
+          (ws as any).page = page;
+          // console.info("Req url::", (ws as any).page);
+          console.info("page::", page);
           ws.send(JSON.stringify({ type: "status", message: "connected" }));
         });
 
