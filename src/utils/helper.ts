@@ -12,9 +12,10 @@ import fs from "fs";
 import * as fsPromise from "fs/promises";
 import { Config } from "./config";
 import { HOST } from "../consatnts/host";
-const { getHttpServerPort, isPublicAccessEnabled } = Config;
+const { getHttpServerPort, getPublicAccessEnabled } = Config;
 import os from "os";
 import { PATH } from "../consatnts/path";
+import { HMR_CLIENT } from "../consatnts/reload-client";
 // all text extension
 const ALL_TEXT_EXTS = new Set([
   ...TEXT_EXTENSIONS,
@@ -22,6 +23,7 @@ const ALL_TEXT_EXTS = new Set([
   ...SCRIPT_EXTENSIONS,
   ...STYLE_EXTENSIONS,
 ]);
+
 /**
  *
  * @returns ports available to use
@@ -44,7 +46,7 @@ export async function getAvailablePort() {
  * @returns {string} `'0.0.0.0'` if public access is enabled, otherwise `127.0.0.1`.
  */
 export function getHost(): string {
-  return isPublicAccessEnabled() ? HOST.LAN : HOST.LOCALHOST;
+  return getPublicAccessEnabled() ? HOST.LAN : HOST.LOCALHOST;
 }
 
 /**
@@ -169,7 +171,19 @@ export function getCurrentWorkpace():
 export function getCurrentFile() {
   const file: vscode.TextDocument | undefined =
     vscode.window.activeTextEditor?.document;
-  return file?.fileName!;
+  if (!file) {
+    return null;
+  }
+
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+  const filePath = file?.fileName!;
+
+  if (!root || !filePath.startsWith(root)) {
+    return null;
+  }
+
+  return filePath;
 }
 
 /**
@@ -179,13 +193,8 @@ export function getCurrentFile() {
  */
 
 export function getRelativeFilePath(fullPath: string) {
-  const workspaceFolders = vscode.workspace.workspaceFolders!;
-
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    // console.log("no workspace");
-    return undefined;
-  }
-  return path.relative(workspaceFolders![0].uri.fsPath, path.resolve(fullPath));
+  const relative = vscode.workspace.asRelativePath(fullPath, false);
+  return relative.replace(/\\/g, "/");
 }
 
 /**
@@ -219,58 +228,40 @@ export function pathExists(path: string): boolean {
   }
 }
 
-/**
- * Returns processed content based on file extension.
- * - Text/Code: returned as string.
- * - Markdown: parsed to HTML.
- * - Binary: returned as base64 string.
- *
- * @param data - file data (string or Buffer)
- * @param ext - file extension
- */
-export function getFileContent(data: string | Buffer, ext: string) {
-  const normalizedExt = ext.toLowerCase();
-
-  if (
-    STYLE_EXTENSIONS.includes(normalizedExt) ||
-    SCRIPT_EXTENSIONS.includes(normalizedExt) ||
-    TEXT_EXTENSIONS.includes(normalizedExt)
-  ) {
-    return data.toString("utf-8");
-  } else if (MARKDOWN_EXTENSIONS.includes(normalizedExt)) {
-    return marked.parse(data.toString("utf-8"), { async: false });
-  } else if (BINARY_EXTENSIONS.includes(normalizedExt)) {
-    // return raw for binary files
-    return data;
+export async function processFilesafely(filePath: string) {
+  let stats;
+  try {
+    stats = await fsPromise.stat(filePath);
+  } catch (error) {
+    return null;
   }
 
-  return null;
-}
-
-export async function processFilesafely(filePath: string) {
   const MAX_AST_PARSE_SIZE = 5 * 1024 * 1024; // 5 mb
   const ext = path.extname(filePath).toLowerCase();
   const isText = ALL_TEXT_EXTS.has(ext);
   const encoding = (isText ? "utf-8" : undefined) as BufferEncoding | undefined;
 
-  const stats = await fsPromise.stat(filePath);
+  stats = await fsPromise.stat(filePath);
   if (stats.size < MAX_AST_PARSE_SIZE) {
     const data = await fsPromise.readFile(filePath, { encoding });
     return {
       type: isText ? "text" : "binary",
       path: filePath,
       size: stats.size,
-      data: data, // string if isText, Buffer if not
+      data: MARKDOWN_EXTENSIONS.includes(ext)
+        ? marked.parse(data as string, { async: false })
+        : data,
       contentType: getMimeType(ext),
     };
   }
   const stream = fs.createReadStream(filePath, { encoding });
 
   if (isText) {
-    let textContent = "";
+    const chunks: string[] = [];
     for await (const chunk of stream) {
-      textContent += chunk;
+      chunks.push(chunk);
     }
+    const textContent = chunks.join("");
     return {
       type: "text",
       data: textContent,
@@ -335,11 +326,14 @@ export function listFilesRecursive(dir: string, baseDir: string): any[] {
  */
 export function isFolder(path: fs.PathLike) {
   try {
+    if (!fs.existsSync(path)) {
+      return false;
+    }
     const isDir = fs.lstatSync(path).isDirectory();
     return isDir;
   } catch (error) {
-    throw error;
-    // return false;
+    // throw error;
+    return false;
   }
 }
 
@@ -348,51 +342,12 @@ export function isFolder(path: fs.PathLike) {
  * @returns auto reload script to be injected within current file
  */
 export function getReloadScript() {
+  // console.info(HMR_CLIENT);
+
   return `
     <script>
-      (function() {
-        const proto = location.protocol === "https:" ? "wss" : "ws";
-        const ws = new WebSocket(\`\${proto}://\${location.host}\`);
-
-        ws.onopen = () => console.log("[HMR] Connected to Dev Server");
-        ws.onerror = (err) => console.error("[HMR] WebSocket Error:", err);
-
-        ws.onmessage = (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            
-            if (msg.action === "reload") {
-              console.log("[HMR] Full reload triggered.");
-              location.reload();
-            } 
-            else if (msg.action === "inject") {
-              console.log("[HMR] Hot injecting changes...");
-              
-              // 1. Hot Swap the Body
-              if (msg.body !== undefined) {
-                document.body.innerHTML = msg.body;
-              }
-
-              // 2. Hot Swap the Styles
-              if (msg.style !== undefined) {
-                let styleTag = document.getElementById("hmr-injected-styles");
-                
-                // Create the style tag if it's the first time injecting
-                if (!styleTag) {
-                  styleTag = document.createElement("style");
-                  styleTag.id = "hmr-injected-styles";
-                  document.head.appendChild(styleTag);
-                }
-                
-                styleTag.innerHTML = msg.style;
-              }
-            }
-          } catch (e) {
-            console.error("[HMR] Failed to process message:", e);
-          }
-        };
-      })();
-    </script>
+    ${HMR_CLIENT}
+  </script>
   `;
 }
 

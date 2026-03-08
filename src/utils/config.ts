@@ -33,11 +33,20 @@ export class Config {
   public static getShowInfoMessages(): boolean | undefined {
     return config.get<boolean>("showInfoMessages");
   }
+
+  /**
+   *
+   * @returns showServerStatusOnStart
+   */
+
+  public static getshowServerStatusOnStart() {
+    return config.get<boolean>("showServerStatusOnStart");
+  }
   /**
    *
    * @returns public access enabled
    */
-  public static isPublicAccessEnabled(): boolean | undefined {
+  public static getPublicAccessEnabled(): boolean | undefined {
     return config.get<boolean>("publicAccess");
   }
 
