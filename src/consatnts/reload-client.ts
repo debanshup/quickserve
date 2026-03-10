@@ -47,8 +47,11 @@ export const HMR_CLIENT = `
 
       // Action 3: CSS Link Refreshing (Cache Busting)
       if (msg.action === "css-update") {
-        const links = document.querySelectorAll("link[rel='stylesheet']");
-        links.forEach((link) => {
+      // console.info("css update")
+      console.info(msg)
+      const links = document.querySelectorAll("link[rel='stylesheet']");
+      links.forEach((link) => {
+        const url = new URL(link.href);
           if (link.href.includes(msg.path)) {
             // Append timestamp to bypass browser cache
             const newHref = msg.path + "?t=" + Date.now();
