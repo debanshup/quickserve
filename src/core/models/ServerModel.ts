@@ -51,7 +51,7 @@ export class Server {
     port: number,
     server: http.Server | https.Server,
   ) {
-    this.wsServer = new WebSocketServer({ noServer: true });
+    this.wsServer = new WebSocketServer({ server });
     this.hostname = hostname;
     this.port = port;
     this.server = server;
@@ -78,9 +78,9 @@ export class Server {
         });
         this.server.on("upgrade", (req, socket, head) => {
           console.info("upgrade");
-          this.wsServer?.handleUpgrade(req, socket, head, (client, req) => {
-            this.wsServer?.emit("connection", client, req);
-          });
+          // this.wsServer?.handleUpgrade(req, socket, head, (client, req) => {
+          //   this.wsServer?.emit("connection", client, req);
+          // });
         });
 
         this.server.on("error", (e: Error) => {
