@@ -58,6 +58,46 @@ export class DependencyGraph {
 
     return false;
   }
+
+  static findRootCss(
+    graph: DependencyGraph,
+    resolvedFilePath: string,
+  ): string | null {
+    const visited = new Set<string>();
+    let current = path.normalize(resolvedFilePath);
+
+    while (true) {
+      if (visited.has(current)) {
+        break;
+      }
+      visited.add(current);
+
+      const node = graph.getNode(current);
+      if (!node) {
+        break;
+      }
+
+      // Look for an importer that is a CSS file (Case Insensitive)
+      const cssParent = [...node.importers].find((imp) =>
+        imp.toLowerCase().endsWith(".css"),
+      );
+
+      // If no CSS parent is found, it means the current 'current'
+      // is the one imported by HTML (or it's an orphan).
+      if (!cssParent) {
+        break;
+      }
+
+      //  Move up the chain
+      current = path.normalize(cssParent);
+    }
+
+    return current;
+  }
+
+
+
+
   /**
    * Resolves relative paths like './App' to '/User/project/src/App.tsx'
    */
@@ -392,7 +432,7 @@ export class DependencyGraph {
     return this.graph.get(resolvedPath);
   }
 
-  createNode(filePath: string, content: string) {
+  public createNode(filePath: string, content: string) {
     const resolvedPath = path.resolve(filePath);
     // console.info(path.resolve(resolvedPath))
     // console.info(resolvedPath);
@@ -427,6 +467,20 @@ export class DependencyGraph {
     const resolvedPath = path.resolve(filePath);
     return this.graph.delete(resolvedPath);
   }
+
+  public clearGraph(){
+    this.graph.clear();
+  }
+
+
+
+
+
+
+
+
+
+
 
   // ---- Debug ------
 
