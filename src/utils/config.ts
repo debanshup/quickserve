@@ -17,6 +17,10 @@ export class Config {
     return config.get<boolean>("auto-reload", true);
   }
 
+  public static getHMREnabled(){
+    return config.get<boolean>("enableHMR");
+  }
+
   /**
    *
    * @returns show statusbar enabled

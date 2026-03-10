@@ -59,12 +59,17 @@
           "maximum": 65536,
           "description": "Port number for the server (default: 3000)"
         },
-        "quickserve.auto-reload": {
+        "quickserve.autoReload": {
           "type": "boolean",
           "default": true,
           "description": "Automatically reload content when changes are detected"
         },
-        "quickserve.show-statusbar": {
+        "quickserve.enableHMR": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Hot Module Reloading (HMR) for QuickServe."
+        },
+        "quickserve.showStatusbar": {
           "type": "boolean",
           "default": true,
           "description": "Show QuickServe status in the VS Code status bar"
