@@ -21,6 +21,7 @@ import {
 } from "../../consatnts/supported-extension";
 
 import { DependencyGraph } from "../dependency-manager/DependencyGraph";
+import { Config } from "../../utils/config";
 
 export class FileWatcher {
   private watcher?: chokidar.FSWatcher;
@@ -73,58 +74,74 @@ export class FileWatcher {
           return;
         }
 
-        console.info(resolvedFilePath);
+        let msg = { action: "none" } as Partial<any>;
 
-        const ext = path.extname(filePath).toLowerCase();
+        if (Config.getHMREnabled()) {
+          const ext = path.extname(filePath).toLowerCase();
 
-        const textData = newContent.data as string;
+          const textData = newContent.data as string;
 
-        let result = { action: "none" } as Partial<any>;
+          if (ext === ".html" || ext === ".htm") {
+            msg = hmrAnalyzer.analyzeHTML(textData);
+          } else if (STYLE_EXTENSIONS.includes(ext)) {
+            /**
+             *@improve :: add support for other file extensions
+             */
 
-        if (ext === ".html" || ext === ".htm") {
-          result = hmrAnalyzer.analyzeHTML(textData);
-        } else if (STYLE_EXTENSIONS.includes(ext)) {
-          /**
-           *@improve :: add HMR
-           */
-          // console.info("Relative path:", getRelativeFilePath(filePath));
-          result = {
-            action: "css-update",
-            path: "/" + getRelativeFilePath(filePath),
-          };
-        } else if (SCRIPT_EXTENSIONS.includes(ext)) {
-          result = { action: "reload" };
-        } else if (ext === ".md") {
-          result = { action: "reload" };
-        }
+            const rootCSS = DependencyGraph.findRootCss(
+              graph,
+              resolvedFilePath,
+            );
+            // console.info("ROOTCSS::", rootCSS);
+            msg = {
+              action: "css-update",
+              path: "/" + getRelativeFilePath(rootCSS ?? filePath),
+            };
+          } else if (SCRIPT_EXTENSIONS.includes(ext)) {
+            msg = { action: "reload" };
+          } else if (ext === ".md") {
+            msg = { action: "reload" };
+          }
 
-        let node = graph.getNode(filePath);
-        if (node) {
-          console.info("Updating existing node...");
-          graph.updateNode(filePath, {
-            ...node,
-            imports: new Set(graph.extractImports(filePath, textData)),
-          });
-          // console.info(node);
+          let node = graph.getNode(filePath);
+          if (node) {
+            console.info("Updating existing node...");
+            graph.updateNode(filePath, {
+              ...node,
+              imports: new Set(graph.extractImports(filePath, textData)),
+            });
+            // console.info(node);
+          } else {
+            // fallback
+            node = graph.createNode(filePath, textData)!;
+          }
+          this.watcher?.add([...node.imports]);
+          // console.info("new watched file", this.watcher!.getWatched());
+          // console.info("result::", result);
+
+          if (msg && msg.action !== "none") {
+            this.wsServer?.clients.forEach((ws) => {
+              const importer = path.resolve(
+                getCurrentDir()! + (ws as any).page,
+              );
+              // console.info(graph.getNode(importer)?.imports);
+              const deep = DependencyGraph.hasDeepImport(
+                graph,
+                importer,
+                resolvedFilePath,
+              );
+              console.info("DEEP::", deep);
+              if (resolvedFilePath === importer || deep) {
+                console.info("sending message");
+                // const payload = { ...result, path: importer };
+                ws.send(JSON.stringify(msg));
+              }
+            });
+          }
         } else {
-          // fallback
-          node = graph.createNode(filePath, textData)!;
-        }
-        this.watcher?.add([...node.imports]);
-        // console.info("new watched file", this.watcher!.getWatched());
-        // console.info("result::", result);
-
-        if (result && result.action !== "none") {
+          msg = { action: "reload" };
           this.wsServer?.clients.forEach((ws) => {
-            const importer = path.resolve(getCurrentDir()! + (ws as any).page);
-            // console.info(graph.getNode(importer)?.imports);
-            if (
-              resolvedFilePath === importer ||
-              DependencyGraph.hasDeepImport(graph, importer, resolvedFilePath)
-            ) {
-              console.info("sending message");
-              ws.send(JSON.stringify(result));
-            }
+            ws.send(JSON.stringify(msg));
           });
         }
       } catch (error) {
