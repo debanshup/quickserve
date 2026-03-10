@@ -241,7 +241,6 @@ export async function processFilesafely(filePath: string) {
   const isText = ALL_TEXT_EXTS.has(ext);
   const encoding = (isText ? "utf-8" : undefined) as BufferEncoding | undefined;
 
-  stats = await fsPromise.stat(filePath);
   if (stats.size < MAX_AST_PARSE_SIZE) {
     const data = await fsPromise.readFile(filePath, { encoding });
     return {
