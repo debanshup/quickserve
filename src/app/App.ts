@@ -91,6 +91,8 @@ export class App implements vscode.Disposable {
   private clearApp() {
     this.server = null;
     this.watcher = null;
+    graph.clearGraph();
+
   }
 
   public async start() {
@@ -169,9 +171,24 @@ export class App implements vscode.Disposable {
         if (result) {
           console.info("Serving from ram");
         }
+
         if (!result) {
           console.info("Serving from disk");
-          result = await processFilesafely(fullReqPath);
+          const diskData = await processFilesafely(fullReqPath);
+          if (!diskData || !diskData.data) {
+            console.warn("null data for::", fullReqPath);
+            res.writeHead(404, {
+              // Fake 'Success' to keep the browser quiet
+              "Content-Type": "text/plain",
+              "X-QuickServe-Error-Code": "FILE_NOT_FOUND",
+              "X-QuickServe-Internal-Msg": encodeURIComponent(
+                "Could not resolve dependency graph",
+              ),
+              "Cache-Control": "no-store", // Ensure the browser doesn't cache this "fake" success
+            });
+            return res.end("");
+          }
+          result = diskData;
           fileCache.set(fullReqPath, result);
         }
 
