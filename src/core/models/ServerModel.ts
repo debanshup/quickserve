@@ -68,6 +68,7 @@ export class Server {
         this.server.on("connection", (socket) => {
           this.connections.add(socket);
           socket.on("close", () => this.connections.delete(socket));
+          socket.on("error", () => this.connections.delete(socket));
         });
         this.server.on("request", (req, res) => {
           if (callback) {
