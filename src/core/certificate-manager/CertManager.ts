@@ -10,7 +10,7 @@ import selfsigned from "selfsigned";
 export class CertManager {
   protected constructor() {}
   // check if mkcert is installed
-  private static checkMkcert() {
+  public static checkMkcert() {
     try {
       // check mkcert
       execSync("mkcert --version", { stdio: "ignore" });
@@ -34,7 +34,7 @@ export class CertManager {
     }
   }
 
-  private static isCertValid(certPath: string, keyPath: string) {
+  public static isCertValid(certPath: string, keyPath: string) {
     try {
       const certPem = fs.readFileSync(certPath);
       const keyPem = fs.readFileSync(keyPath);
@@ -65,6 +65,40 @@ export class CertManager {
     } catch (error) {
       return { status: false, msg: ERROR_MESSAGES.CERT_FORMAT_ERROR };
     }
+  }
+
+  public static async generateFallbackCert() {
+    const pems = await selfsigned.generate(
+      [{ name: "commonName", value: "localhost" }],
+      {
+        extensions: [
+          {
+            name: "basicConstraints",
+            cA: false,
+          },
+          // EKU
+          {
+            name: "extKeyUsage",
+            serverAuth: true,
+          },
+          {
+            name: "keyUsage",
+            digitalSignature: true,
+            keyEncipherment: true,
+          },
+          {
+            name: "subjectAltName",
+            altNames: [
+              { type: 2, value: "localhost" }, // DNS
+              { type: 7, ip: "127.0.0.1" }, // IPv4
+              { type: 7, ip: "::1" }, // IPv6
+            ],
+          },
+        ],
+      },
+    );
+
+    return pems;
   }
 
   public static async getCert(sslConfig: {
@@ -124,36 +158,7 @@ export class CertManager {
           };
         } else {
           console.info("using selfsigned");
-          const pems = await selfsigned.generate(
-            [{ name: "commonName", value: "localhost" }],
-            {
-              extensions: [
-                {
-                  name: "basicConstraints",
-                  cA: false,
-                },
-                // EKU
-                {
-                  name: "extKeyUsage",
-                  serverAuth: true,
-                },
-                {
-                  name: "keyUsage",
-                  digitalSignature: true,
-                  keyEncipherment: true,
-                },
-                {
-                  name: "subjectAltName",
-                  altNames: [
-                    { type: 2, value: "localhost" }, // DNS
-                    { type: 7, ip: "127.0.0.1" }, // IPv4
-                    { type: 7, ip: "::1" }, // IPv6
-                  ],
-                },
-              ],
-            },
-          );
-
+          const pems = await CertManager.generateFallbackCert();
           fs.writeFileSync(certPath, pems.cert);
           fs.writeFileSync(keyPath, pems.private);
           return { cert: pems.cert, key: pems.private };
