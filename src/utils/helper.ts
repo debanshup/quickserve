@@ -172,7 +172,7 @@ export function getCurrentFile() {
   const file: vscode.TextDocument | undefined =
     vscode.window.activeTextEditor?.document;
   if (!file) {
-    return null;
+    return undefined;
   }
 
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
