@@ -7,14 +7,14 @@ export class Config {
    * @returns http server port
    */
   public static getHttpServerPort(): number | undefined {
-    return config.get<number>("httpServer.port", 3000);
+    return config.get<number>("port", 3000);
   }
   /**
    *
    * @returns auto reload enabled
    */
-  public static getAutoReloadEnabled(): boolean {
-    return config.get<boolean>("auto-reload", true);
+  public static getWatcherEnabled(): boolean {
+    return config.get<boolean>("enableWatcher", true);
   }
 
   public static getHMREnabled(){
@@ -26,7 +26,7 @@ export class Config {
    * @returns show statusbar enabled
    */
   public static getShowStatusBar(): boolean {
-    return config.get<boolean>("show-statusbar")!;
+    return config.get<boolean>("showStatusbar")!;
   }
 
   /**
