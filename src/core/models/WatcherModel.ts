@@ -1,11 +1,9 @@
 import * as chokidar from "chokidar";
-
 import { WebSocketServer } from "ws";
 import {
   LogEventTypes,
   LoggerEvents,
 } from "./observer/log_observer/logEventEmitter";
-import { readFile } from "fs/promises";
 import { HmrAnalyzer } from "../HMR/HmrAnalyzer";
 import {
   getCurrentDir,
@@ -130,7 +128,6 @@ export class FileWatcher {
                 importer,
                 resolvedFilePath,
               );
-              console.info("DEEP::", deep);
               if (resolvedFilePath === importer || deep) {
                 console.info("sending message");
                 // const payload = { ...result, path: importer };
