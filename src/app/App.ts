@@ -44,20 +44,23 @@ import {
   StatusEvents,
   StatusEventTypes,
 } from "../core/models/observer/status_observer/StatusEventEmitter";
-const { getAutoReloadEnabled, getPublicAccessEnabled } = Config;
+const { getWatcherEnabled, getPublicAccessEnabled } = Config;
 
 export class App implements vscode.Disposable {
   public isRunning: boolean = false;
   private server: Server | null = null;
   private watcher: FileWatcher | null = null;
   private publicUrl: string = "";
+  private serverObserver = new ServerObserver();
+  private logObserver = new LogObserver();
+  private statusObserver = new StatusObserver();
   /**
    * @constructor
    */
   constructor() {
-    new ServerObserver();
-    new LogObserver();
-    new StatusObserver();
+    this.serverObserver.init();
+    this.logObserver.init();
+    this.statusObserver.init();
     StatusbarUI.init();
     this.isRunning = false;
   }
@@ -92,7 +95,6 @@ export class App implements vscode.Disposable {
     this.server = null;
     this.watcher = null;
     graph.clearGraph();
-
   }
 
   public async start() {
@@ -116,7 +118,7 @@ export class App implements vscode.Disposable {
     const server = await this.getServer(hostname, port, proto);
 
     // handle reload
-    if (getAutoReloadEnabled()) {
+    if (getWatcherEnabled()) {
       const watcher = this.getWatcher(this.server?.wsServer!);
       watcher.start();
     }
@@ -196,7 +198,6 @@ export class App implements vscode.Disposable {
           let finalData = result.data as string;
           if (!graph.isNodeAvailable(fullReqPath)) {
             console.info("Node not available, creating node");
-            // graph.createNode(fullReqPath, finalData);
             graph.build(fullReqPath);
 
             // const maps
@@ -264,12 +265,9 @@ export class App implements vscode.Disposable {
       publicUrl: this.publicUrl,
     });
 
-    /**
-     * @debug
-     */
     // vscode.env.openExternal(
     //   getConnectionURI(proto, "localhost:", port, relativePath!),
-    // );
+    // );`
     vscode.env.openExternal(
       getConnectionURI(proto, HOST.LOCALHOST, port, relativePath!),
     );
@@ -286,18 +284,23 @@ export class App implements vscode.Disposable {
       ServerEvents.emit(ServerEventTypes.NOT_RUNNING);
       return;
     }
-    console.time("stop");
-    await this.server!.stop();
-    await this.watcher?.stop();
-    console.timeEnd("stop");
-    this.isRunning = false;
+    // console.time("stop");
+    await Promise.all([this.server!.stop(), this.watcher?.stop()]);
+    this.disposeAllObserver();
+    this.isRunning = true;
     this.clearApp();
     StatusEvents.emit(StatusEventTypes.STOP);
   }
 
+  private async disposeAllObserver() {
+    this.statusObserver.dispose();
+    this.serverObserver.dispose();
+    this.logObserver.dispose();
+  }
+
   public async dispose() {
     await this.stop(); // stop server while disposing
-    this.clearApp();
+    this.disposeAllObserver();
     StatusbarUI.dispose();
   }
 }
