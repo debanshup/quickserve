@@ -4,10 +4,12 @@ const { CONN_URI, DEBUG, ERROR, HTTP_REQ, HTTP_RES, INFO, WARN } =
 import { LogLevel, log, logger } from "./logger";
 
 export class LogObserver {
-  constructor() {
+  constructor() {}
+
+  public init() {
     LoggerEvents.on(CONN_URI, ({ url }) => {
       logger.info(
-        `${"Available on local network →"} ${url}\n${"Use this URI in a browser on another device to connect."}`
+        `${"Available on local network →"} ${url}\n${"Use this URI in a browser on another device to connect."}`,
       );
     });
     LoggerEvents.on(HTTP_REQ, ({ method, url }) => {
@@ -27,6 +29,17 @@ export class LogObserver {
     LoggerEvents.on(DEBUG, ({ msg }) => {
       logger.debug(msg);
     });
+  }
+
+  public dispose() {
+    LoggerEvents.removeAllListeners(CONN_URI);
+    LoggerEvents.removeAllListeners(HTTP_REQ);
+    LoggerEvents.removeAllListeners(HTTP_RES);
+    LoggerEvents.removeAllListeners(INFO);
+    LoggerEvents.removeAllListeners(ERROR);
+    LoggerEvents.removeAllListeners(DEBUG);
+    LoggerEvents.removeAllListeners(WARN);
+    console.info("removed all log listener");
   }
 
   /**

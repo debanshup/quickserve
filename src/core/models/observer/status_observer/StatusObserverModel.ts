@@ -3,7 +3,8 @@ import qrcode from "qrcode-terminal";
 import { StatusEvents, StatusEventTypes } from "./StatusEventEmitter";
 
 export class StatusObserver {
-  constructor() {
+  constructor() {}
+  public init() {
     StatusEvents.on(
       StatusEventTypes.START,
       (status: {
@@ -45,24 +46,32 @@ export class StatusObserver {
     publicUrl: string;
   }) {
     statusOutput.clear();
-    statusOutput.appendLine(`Running: ${on}`);
-    statusOutput.appendLine(`Port: ${port}`);
-    statusOutput.appendLine(`Public access enabled: ${isPublicAccessEnabled}`);
-    if (isPublicAccessEnabled) {
-      statusOutput.appendLine(`Public URL: ${publicUrl}`);
+    statusOutput.appendLine("QuickServe initialized successfully.");
+    statusOutput.appendLine(`[Port]   ${port}`);
+
+    if (isPublicAccessEnabled && publicUrl) {
+      statusOutput.appendLine(`[Public] ${publicUrl}`);
+      statusOutput.appendLine("");
 
       qrcode.generate(publicUrl, { small: true }, (qr) => {
         statusOutput.appendLine(qr);
       });
 
-      statusOutput.appendLine("Scan QR to access");
+      statusOutput.appendLine("Scan the QR code above to access via mobile.");
+    } else {
+      statusOutput.appendLine("[Public] Access Disabled.");
     }
-    //  show status output
-    // statusOutput.show(true);
   }
-
   private onStop() {
     statusOutput.clear();
     statusOutput.appendLine("Server stopped");
+  }
+
+  public dispose() {
+    StatusEvents.removeAllListeners(StatusEventTypes.ERROR);
+    StatusEvents.removeAllListeners(StatusEventTypes.HIDE);
+    StatusEvents.removeAllListeners(StatusEventTypes.SHOW);
+    StatusEvents.removeAllListeners(StatusEventTypes.START);
+    StatusEvents.removeAllListeners(StatusEventTypes.STOP);
   }
 }

@@ -7,7 +7,9 @@ import { Config } from "../../../../utils/config";
 
 const { getShowInfoMessages } = Config;
 export class ServerObserver {
-  constructor() {
+  constructor() {}
+
+  public init() {
     ServerEvents.on(ServerEventTypes.START, (port: number) => {
       this.onStart(port);
     });
@@ -41,5 +43,13 @@ export class ServerObserver {
       `${POP_UP_MESSAGE.SERVER_ERROR}: ${error.message}`,
     );
     StatusbarUI.run();
+  }
+
+  public dispose() {
+    ServerEvents.removeAllListeners(ServerEventTypes.ERROR);
+    ServerEvents.removeAllListeners(ServerEventTypes.NOT_RUNNING);
+    ServerEvents.removeAllListeners(ServerEventTypes.NO_ACTIVE_PATH);
+    ServerEvents.removeAllListeners(ServerEventTypes.START);
+    ServerEvents.removeAllListeners(ServerEventTypes.STOP);
   }
 }
