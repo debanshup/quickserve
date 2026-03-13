@@ -1,15 +1,16 @@
 import { StatusBarAlignment, StatusBarItem, window } from "vscode";
 import { Config } from "./utils/config";
+import { ThemeColor } from "vscode";
 const { getShowStatusBar } = Config;
 export class StatusbarUI {
-  private static _statusbar: StatusBarItem;
+   static _statusbar: StatusBarItem;
   // public static isRunning: boolean = false;
   // public static port: number;
   private static get statusBar() {
     if (!StatusbarUI._statusbar) {
       StatusbarUI._statusbar = window.createStatusBarItem(
         StatusBarAlignment.Right,
-        100
+        100,
       );
 
       if (getShowStatusBar()) {
@@ -42,8 +43,9 @@ export class StatusbarUI {
    * Sets the status bar to the "Serve" state, with appropriate tooltip and command.
    */
   public static run() {
-    StatusbarUI.statusBar.text = `$(server) Serve`;
-    StatusbarUI.statusBar.tooltip = "start server";
+    StatusbarUI.statusBar.color = undefined;
+    StatusbarUI.statusBar.text = `$(play-circle) Start QuickServe`;
+    StatusbarUI.statusBar.tooltip = "Launch local development server";
     StatusbarUI.statusBar.command = "quickserve.run";
   }
 
@@ -53,9 +55,10 @@ export class StatusbarUI {
    * @param port - The port number to display in the status bar.
    */
   public static kill(port: number) {
-    StatusbarUI.statusBar.text = `$(circle-slash) PORT: ${port}`;
-    StatusbarUI.statusBar.tooltip = "Stop server";
+    StatusbarUI.statusBar.text = `$(stop-circle) QuickServe: ${port}`;
+    StatusbarUI.statusBar.tooltip = `Stop serving on ${port}`;
     StatusbarUI.statusBar.command = "quickserve.kill";
+    StatusbarUI.statusBar.color = new ThemeColor('statusBarItem.warningForeground');
   }
 
   /**
