@@ -32,17 +32,24 @@
       }
     ],
     "configuration": {
-      "title": "Extension configuration",
+      "title": "QuickServe Configuration",
       "properties": {
         "quickserve.publicAccess": {
           "type": "boolean",
           "default": true,
-          "description": "Allow access to the server from other devices within the network (e.g., over Wi-Fi or USB)"
+          "description": "Enable network access to allow other devices (phones, tablets, or other PCs) on your local network to connect to the server."
         },
         "quickserve.https": {
           "type": "boolean",
           "default": true,
-          "description": "Enable HTTPS"
+          "markdownDescription": "Enable HTTPS. Required for testing features that demand a **Secure Context**, such as Service Workers, Clipboard API, or Geolocation."
+        },
+        "quickserve.port": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "The local port number the server will listen on. If the port is in use, QuickServe may fail to start."
         },
         "quickserve.sslConfig": {
           "type": "object",
@@ -50,39 +57,32 @@
             "certPath": "",
             "keyPath": ""
           },
-          "description": "Optional custom HTTPS certificate configuration. Provide both certPath and keyPath. If not provided or incomplete, QuickServe generates a self-signed certificate automatically."
+          "markdownDescription": "Paths to custom SSL certificate and key files. If left empty, QuickServe will automatically generate a **self-signed certificate**."
         },
-        "quickserve.httpServer.port": {
-          "type": "number",
-          "default": 3000,
-          "minimum": 1024,
-          "maximum": 65536,
-          "description": "Port number for the server (default: 3000)"
-        },
-        "quickserve.autoReload": {
+        "quickserve.enableWatcher": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically reload content when changes are detected"
+          "markdownDescription": "Start a background **file watcher** to monitor workspace changes. This is the core service required for both `Full Reload` and `HMR` to function."
         },
         "quickserve.enableHMR": {
           "type": "boolean",
           "default": true,
-          "description": "Enable Hot Module Reloading (HMR) for QuickServe."
+          "markdownDescription": "Enable **Hot Module Replacement (HMR)**. This allows CSS and assets to update instantly without a full page reload, preserving the current application state. \n\n> **Note:** This feature requires `quickserve.enableWatcher` to be enabled so the file watcher can detect changes."
         },
         "quickserve.showStatusbar": {
           "type": "boolean",
           "default": true,
-          "description": "Show QuickServe status in the VS Code status bar"
+          "description": "Toggle the visibility of the QuickServe controls in the VS Code status bar."
         },
         "quickserve.showInfoMessages": {
           "type": "boolean",
           "default": true,
-          "description": "Display status messages such as 'Server Started', 'Server Stopped', and other server events."
+          "description": "Show VS Code notification pop-ups for server lifecycle events (Start, Stop, Errors)."
         },
         "quickserve.showServerStatusOnStart": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically show the QuickServe server status output channel when the server starts."
+          "description": "Automatically open and focus the QuickServe output channel to show the local URL and QR code when the server starts."
         }
       }
     }
