@@ -17,7 +17,7 @@ export class Config {
     return config.get<boolean>("enableWatcher", true);
   }
 
-  public static getHMREnabled(){
+  public static getHMREnabled() {
     return config.get<boolean>("enableHMR");
   }
 
@@ -62,11 +62,7 @@ export class Config {
     return config.get<{ certPath: string; keyPath: string }>("sslConfig");
   }
 
-  // /**
-  //  *
-  //  * @returns current log level
-  //  */
-  //   public static getCurrentLogLevel(): string|undefined{
-  //     return config.get<string>("logLevel");
-  //   }
+  public static getOpenBrowserEnabled() {
+    return config.get<boolean>("openBrowser");
+  }
 }

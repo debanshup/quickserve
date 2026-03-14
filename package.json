@@ -83,6 +83,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically open and focus the QuickServe output channel to show the local URL and QR code when the server starts."
+        },
+        "quickserve.openBrowser": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open browser when the server starts."
         }
       }
     }

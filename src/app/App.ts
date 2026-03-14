@@ -44,7 +44,6 @@ import {
   StatusEvents,
   StatusEventTypes,
 } from "../core/models/observer/status_observer/StatusEventEmitter";
-const { getWatcherEnabled, getPublicAccessEnabled } = Config;
 
 export class App implements vscode.Disposable {
   public isRunning: boolean = false;
@@ -118,7 +117,7 @@ export class App implements vscode.Disposable {
     const server = await this.getServer(hostname, port, proto);
 
     // handle reload
-    if (getWatcherEnabled()) {
+    if (Config.getWatcherEnabled()) {
       const watcher = this.getWatcher(this.server?.wsServer!);
       watcher.start();
     }
@@ -252,7 +251,7 @@ export class App implements vscode.Disposable {
     const relativePath = getRelativeFilePath(
       currentFilePath || currentFolderPath,
     );
-    const isPublicAccessEnabled = getPublicAccessEnabled();
+    const isPublicAccessEnabled = Config.getPublicAccessEnabled();
     if (isPublicAccessEnabled) {
       this.publicUrl = `${proto}//${getLocalIP()}:${this.server?.port!.toString()}/`;
       LoggerEvents.emit(LogEventTypes.CONN_URI, { url: this.publicUrl });
@@ -265,12 +264,11 @@ export class App implements vscode.Disposable {
       publicUrl: this.publicUrl,
     });
 
-    // vscode.env.openExternal(
-    //   getConnectionURI(proto, "localhost:", port, relativePath!),
-    // );`
-    vscode.env.openExternal(
-      getConnectionURI(proto, HOST.LOCALHOST, port, relativePath!),
-    );
+    if (Config.getOpenBrowserEnabled()) {
+      vscode.env.openExternal(
+        getConnectionURI(proto, HOST.LOCALHOST, port, relativePath!),
+      );
+    }
     // show status if applicable
     if (Config.getshowServerStatusOnStart()) {
       StatusEvents.emit(StatusEventTypes.SHOW);
