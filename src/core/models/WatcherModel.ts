@@ -98,7 +98,7 @@ export class FileWatcher {
   /**
    * broadcasts payload to every connected client
    */
-  public broadcastToAll(payload: any) {
+  public broadcastToAll(payload: { action?: string }) {
     if (!this.wsServer) {
       return;
     }
