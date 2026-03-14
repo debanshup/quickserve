@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import * as Helper from "../utils/helper";
 import { Config } from "../utils/config";
-import { HOST } from "../consatnts/host";
+import { HOST } from "../constants/host";
 import { Server } from "../core/models/ServerModel";
 import { FileWatcher } from "../core/models/WatcherModel";
 import WebSocket from "ws";

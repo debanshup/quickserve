@@ -16,7 +16,7 @@ import path from "path";
 import {
   SCRIPT_EXTENSIONS,
   STYLE_EXTENSIONS,
-} from "../../consatnts/supported-extension";
+} from "../../constants/supported-extension";
 
 import { DependencyGraph } from "../dependency-manager/DependencyGraph";
 import { Config } from "../../utils/config";

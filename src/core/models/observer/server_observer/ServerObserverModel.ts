@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ServerEvents, ServerEventTypes } from "./serverEventEmitter";
-import { ERROR_MESSAGES } from "../../../../consatnts/errorMessages";
-import { POP_UP_MESSAGE } from "../../../../consatnts/pop-upMessage";
+import { ERROR_MESSAGES } from "../../../../constants/errorMessages";
+import { POP_UP_MESSAGE } from "../../../../constants/pop-upMessage";
 import { StatusbarUI } from "../../../../StatusBarUI";
 import { Config } from "../../../../utils/config";
 

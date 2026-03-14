@@ -5,17 +5,17 @@ import {
   SCRIPT_EXTENSIONS,
   STYLE_EXTENSIONS,
   TEXT_EXTENSIONS,
-} from "../consatnts/supported-extension";
+} from "../constants/supported-extension";
 import path from "path";
 import { marked } from "marked";
 import fs from "fs";
 import * as fsPromise from "fs/promises";
 import { Config } from "./config";
-import { HOST } from "../consatnts/host";
+import { HOST } from "../constants/host";
 const { getHttpServerPort, getPublicAccessEnabled } = Config;
 import os from "os";
-import { PATH } from "../consatnts/path";
-import { HMR_CLIENT } from "../consatnts/reload-client";
+import { PATH } from "../constants/path";
+import { HMR_CLIENT } from "../constants/reload-client";
 // all text extension
 const ALL_TEXT_EXTS = new Set([
   ...TEXT_EXTENSIONS,

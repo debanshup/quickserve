@@ -12,7 +12,7 @@ import {
   LoggerEvents,
 } from "./observer/log_observer/logEventEmitter";
 
-import { ERROR_MESSAGES } from "../../consatnts/errorMessages";
+import { ERROR_MESSAGES } from "../../constants/errorMessages";
 import { CertManager } from "../certificate-manager/CertManager";
 export class Server {
   wsServer: WebSocketServer | undefined;

@@ -2,8 +2,8 @@ import { execSync } from "child_process";
 import * as vscode from "vscode";
 import { createPrivateKey, createPublicKey, X509Certificate } from "crypto";
 import path from "path";
-import { ERROR_MESSAGES } from "../../consatnts/errorMessages";
-import { PATH } from "../../consatnts/path";
+import { ERROR_MESSAGES } from "../../constants/errorMessages";
+import { PATH } from "../../constants/path";
 import fs from "fs";
 import selfsigned from "selfsigned";
 

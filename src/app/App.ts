@@ -2,7 +2,7 @@ import vscode from "vscode";
 import { WebSocketServer } from "ws";
 import { StatusbarUI } from "../StatusBarUI";
 import { Config } from "../utils/config";
-import { HOST } from "../consatnts/host";
+import { HOST } from "../constants/host";
 
 import { ServerObserver } from "../core/models/observer/server_observer/ServerObserverModel";
 import { LogObserver } from "../core/models/observer/log_observer/LogObserverModel";

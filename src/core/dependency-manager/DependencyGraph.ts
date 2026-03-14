@@ -5,11 +5,11 @@ import { parse as parseHtml } from "node-html-parser";
 import fs from "fs";
 import { Node } from "../../Types";
 import path from "path";
-import { CORE_MODULES } from "../../consatnts/coreModules";
+import { CORE_MODULES } from "../../constants/coreModules";
 import {
   SCRIPT_EXTENSIONS,
   STYLE_EXTENSIONS,
-} from "../../consatnts/supported-extension";
+} from "../../constants/supported-extension";
 
 export class DependencyGraph {
   // [x: string]: any;
