@@ -14,6 +14,7 @@ import {
 
 import { ERROR_MESSAGES } from "../../constants/errorMessages";
 import { CertManager } from "../certificate-manager/CertManager";
+import { clientRegistry } from "../../store/ClientRegistry";
 export class Server {
   wsServer: WebSocketServer | undefined;
   on: boolean = false;
@@ -21,7 +22,7 @@ export class Server {
   private server: http.Server | https.Server;
   private hostname: string | undefined;
   private connections = new Set<Socket>();
-  private startTime = performance.now();
+  // private startTime = performance.now();
 
   static async create(
     hostname: string,
@@ -77,12 +78,6 @@ export class Server {
             res.end("No callback provided");
           }
         });
-        this.server.on("upgrade", (req, socket, head) => {
-          console.info("upgrade");
-          // this.wsServer?.handleUpgrade(req, socket, head, (client, req) => {
-          //   this.wsServer?.emit("connection", client, req);
-          // });
-        });
 
         this.server.on("error", (e: Error) => {
           reject(e);
@@ -94,8 +89,8 @@ export class Server {
           LoggerEvents.emit(LogEventTypes.INFO, {
             msg: "server started" + JSON.stringify(this.server!.address()),
           });
-          const end = performance.now();
-          console.info("cold start time:", end - this.startTime);
+          // const end = performance.now();
+          // console.info("cold start time:", end - this.startTime);
           resolve();
         });
 
@@ -103,9 +98,7 @@ export class Server {
           // console.info("req url::", req.url);
           const url = new URL(req.url!, "http://localhost");
           const page = url.searchParams.get("page");
-          (ws as any).page = page;
-          // console.info("Req url::", (ws as any).page);
-          console.info("page::", page);
+          clientRegistry.set(ws, { page });
           ws.send(JSON.stringify({ type: "status", message: "connected" }));
         });
 
