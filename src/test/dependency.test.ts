@@ -32,7 +32,7 @@ suite("HMR DependencyGraph", () => {
     depsGraph.clearGraph();
   });
 
-  test("1. xtract Imports: Should correctly parse JS, CSS, and HTML", () => {
+  test("1. extract Imports: Should correctly parse JS, CSS, and HTML", () => {
     // create test files
     const jsPath = createTestFile("main.js", `import { dep } from './dep.js';`);
     const cssPath = createTestFile("style.css", `@import "./vars.css";`);
