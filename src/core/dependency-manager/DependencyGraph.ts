@@ -30,7 +30,7 @@ export class DependencyGraph {
 
     while (stack.length > 0) {
       const current = stack.pop()!;
-      console.log(`Checking: ${current} -> searching for ${target}`);
+      // console.log(`Checking: ${current} -> searching for ${target}`);
 
       if (visited.has(current)) {
         continue;
@@ -43,15 +43,15 @@ export class DependencyGraph {
       }
 
       if (node.imports.has(target)) {
-        console.warn(
-          `Circular Dependency Found: ${target} is imported by ${current}`,
-        );
+        // console.warn(
+        //   `Circular Dependency Found: ${target} is imported by ${current}`,
+        // );
         return true;
       }
 
       for (const dep of node.imports) {
         if (!visited.has(dep)) {
-          stack.push(dep); // ***replaces recursive call***
+          stack.push(dep); // replaces recursive call
         }
       }
     }
@@ -94,9 +94,6 @@ export class DependencyGraph {
 
     return current;
   }
-
-
-
 
   /**
    * Resolves relative paths like './App' to '/User/project/src/App.tsx'
@@ -153,6 +150,10 @@ export class DependencyGraph {
     // init node in graph
     // console.info(resolvedPath);
 
+    if (!fs.existsSync(resolvedPath)) {
+      console.warn("File not found", resolvedPath);
+      return;
+    }
     if (!this.graph.has(resolvedPath)) {
       this.graph.set(resolvedPath, {
         // file: resolvedPath,
@@ -160,17 +161,13 @@ export class DependencyGraph {
         importers: new Set(),
       });
     }
-    if (!fs.existsSync(resolvedPath)) {
-      console.warn("File not found", resolvedPath);
-    }
-
-    const content = fs.readFileSync(resolvedPath, "utf-8");
-    const ext = path.extname(resolvedPath).toLowerCase();
-    const dir = path.dirname(resolvedPath);
 
     let dependencies: any[] = [];
 
     try {
+      const content = fs.readFileSync(resolvedPath, "utf-8");
+      const ext = path.extname(resolvedPath).toLowerCase();
+
       if (ext === ".html" || ext === ".htm") {
         dependencies = this.extractHtmlDeps(content);
       } else if (ext === ".css") {
@@ -178,9 +175,11 @@ export class DependencyGraph {
       } else if ([".js", ".mjs", ".ts", ".tsx"].includes(ext)) {
         dependencies = this.extractScriptDeps(content);
       }
-    } catch (error) {
-      console.error(`Error parsing ${resolvedPath}:`, error);
+    } catch (error: any | Error) {
+      console.error(`Error parsing ${resolvedPath}:`, error.message);
+      return;
     }
+    const dir = path.dirname(resolvedPath);
 
     // track built in modules to ignore
     // process deps
@@ -222,10 +221,23 @@ export class DependencyGraph {
     const root = parseHtml(content);
     const deps: string[] = [];
 
+    // Helper function to validate local paths
+    const isLocalPath = (p: string | undefined | null): p is string => {
+      if (!p) {
+        return false;
+      }
+      return !(
+        p.startsWith("http://") ||
+        p.startsWith("https://") ||
+        p.startsWith("//") || // Catches protocol-relative CDNs
+        p.startsWith("data:") // Catches base64 injected scripts/styles
+      );
+    };
+
     // <script src="...">
     root.querySelectorAll("script").forEach((el) => {
-      const src = el.getAttribute("src");
-      if (src && !src.startsWith("http")) {
+      const src = el.getAttribute("src")?.trim();
+      if (isLocalPath(src)) {
         deps.push(src);
       }
     });
@@ -234,19 +246,11 @@ export class DependencyGraph {
     root
       .querySelectorAll('link[rel="stylesheet"], link[as="style"]')
       .forEach((el) => {
-        const href = el.getAttribute("href");
-        if (href && !href.startsWith("http")) {
+        const href = el.getAttribute("href")?.trim();
+        if (isLocalPath(href)) {
           deps.push(href);
         }
       });
-
-    // <img src="...">
-    // root.querySelectorAll("img").forEach((el) => {
-    //   const src = el.getAttribute("src");
-    //   if (src && !src.startsWith("http")) {
-    //     deps.push(src);
-    //   }
-    // });
 
     return deps;
   }
@@ -255,12 +259,22 @@ export class DependencyGraph {
     const deps: string[] = [];
 
     ast.stylesheet?.rules.forEach((rule: any) => {
-      if (rule.type === "import") {
-        // @import "style.css"; -> style.css
-        const importPath = rule.import.replace(/['"]/g, "").trim();
+      if (rule.type === "import" && rule.import) {
+        // 1. Extract the raw string
+        let importPath = rule.import.trim();
+
+        // 2. Strip the url(...) wrapper if it exists
+        if (importPath.startsWith("url(") && importPath.endsWith(")")) {
+          importPath = importPath.slice(4, -1);
+        }
+
+        // 3. Strip quotes (single or double) and trim any remaining spaces
+        importPath = importPath.replace(/['"]/g, "").trim();
+
         deps.push(importPath);
       }
     });
+
     return deps;
   }
   private extractScriptDeps(content: string) {
@@ -291,14 +305,18 @@ export class DependencyGraph {
           }
         },
         CallExpression(node: any) {
-          const isRequire = node.callee.name === "require";
-          const isDynamicImport = node.callee.type === "Import";
+          // Now this only handles require()
           if (
-            (isRequire || isDynamicImport) &&
+            node.callee.name === "require" &&
             node.arguments[0]?.type === "Literal"
           ) {
-            // console.info("Got:: require / dynamic import");
             deps.push(node.arguments[0].value);
+          }
+        },
+        // ADD THIS: Modern Acorn parses dynamic imports as ImportExpression
+        ImportExpression(node: any) {
+          if (node.source && node.source.type === "Literal") {
+            deps.push(node.source.value);
           }
         },
       });
@@ -397,9 +415,8 @@ export class DependencyGraph {
    */
   public updateNode(filePath: string, newNode: Node) {
     const resolvedPath = path.resolve(filePath);
-    console.info(resolvedPath);
     if (!this.graph.has(resolvedPath)) {
-      console.warn("Node not found");
+      // console.warn("Node not found");
       return;
     }
     const existingNode = this.graph.get(resolvedPath)!;
@@ -468,10 +485,9 @@ export class DependencyGraph {
     return this.graph.delete(resolvedPath);
   }
 
-  public clearGraph(){
+  public clearGraph() {
     this.graph.clear();
   }
-
 
   // ---- Debug ------
 
