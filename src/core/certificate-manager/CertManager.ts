@@ -10,7 +10,7 @@ import selfsigned from "selfsigned";
 export class CertManager {
   protected constructor() {}
   // check if mkcert is installed
-  public static checkMkcert() {
+  private static checkMkcert() {
     try {
       // check mkcert
       execSync("mkcert --version", { stdio: "ignore" });
@@ -34,7 +34,7 @@ export class CertManager {
     }
   }
 
-  public static isCertValid(certPath: string, keyPath: string) {
+  private static isCertValid(certPath: string, keyPath: string) {
     try {
       const certPem = fs.readFileSync(certPath);
       const keyPem = fs.readFileSync(keyPath);
@@ -67,7 +67,7 @@ export class CertManager {
     }
   }
 
-  public static async generateFallbackCert() {
+  private static async generateFallbackCert() {
     const pems = await selfsigned.generate(
       [{ name: "commonName", value: "localhost" }],
       {

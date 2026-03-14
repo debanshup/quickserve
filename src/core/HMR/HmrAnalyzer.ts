@@ -1,5 +1,4 @@
 import { parse, HTMLElement } from "node-html-parser";
-import css from "css";
 
 export class HmrAnalyzer {
   private previousHtml: string = "";
@@ -11,7 +10,7 @@ export class HmrAnalyzer {
   public analyzeHTML(newHtml: string) {
     // First run: No previous HTML to compare against
     if (!this.previousHtml) {
-      console.info("FIRST TIME CHANGE");
+      // console.info("FIRST TIME CHANGE");
       this.previousHtml = newHtml;
       return { action: "reload" };
     }
