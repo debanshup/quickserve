@@ -1,51 +1,77 @@
-import { execSync } from "child_process";
-import { CertManager } from "../core/certificate-manager/CertManager";
 import assert from "assert";
 import path from "path";
 import fs from "fs";
-test("SSL: Should detect if mkcert is installed on system", () => {
-  let isMkcertAvailable = false;
+import { execSync } from "child_process";
+import { CertManager } from "../core/certificate-manager/CertManager";
 
-  try {
-    const version = execSync("mkcert -version", { stdio: "pipe" }).toString();
-    isMkcertAvailable = version.length > 0;
-  } catch (e) {
-    isMkcertAvailable = false;
-  }
-  assert.strictEqual(CertManager.checkMkcert(), isMkcertAvailable);
-});
+suite("CertManager - SSL & Certificate Handling", () => {
+  let tmpDir: string;
 
-test("SSL: Should validate provided certificate format", async () => {
-  const invalidCertPath = path.join(__dirname, "fake_cert.txt");
-  fs.writeFileSync(invalidCertPath, "not-a-real-cert");
+  setup(() => {
+    tmpDir = path.join(__dirname, `cert-tmp-${Date.now()}`);
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+  });
 
-  const sslConfig = {
-    certPath: invalidCertPath,
-    keyPath: invalidCertPath,
-  };
+  teardown(() => {
+    if (fs.existsSync(tmpDir)) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 
-  const { status } = CertManager.isCertValid(
-    sslConfig.certPath,
-    sslConfig.keyPath,
-  );
+  test("1. Should detect if mkcert is installed on system", () => {
+    let isMkcertAvailable = false;
 
-  assert.strictEqual(
-    status,
-    false,
-    "Should reject non-PEM formatted certificates",
-  );
+    try {
+      const version = execSync("mkcert -version", { stdio: "pipe" }).toString();
+      isMkcertAvailable = version.trim().length > 0;
+    } catch (e) {
+      isMkcertAvailable = false;
+    }
 
-  // Cleanup
-  fs.unlinkSync(invalidCertPath);
-});
+    // accessing private method for testing, same pattern in other test files
+    const managerResult = (CertManager as any).checkMkcert();
 
-test("SSL: Should fallback to self-signed cert if paths are empty", async () => {
-  const certs = await CertManager.generateFallbackCert();
+    assert.strictEqual(
+      managerResult,
+      isMkcertAvailable,
+      `CertManager mkcert detection (${managerResult}) should match system baseline (${isMkcertAvailable})`,
+    );
+  });
 
-  assert.ok(certs.cert, "Fallback certificate should be generated");
-  assert.ok(certs.private, "Fallback key should be generated");
-  assert.ok(
-    certs.cert.includes("BEGIN CERTIFICATE"),
-    "Should be a valid PEM string",
-  );
+  test("2. Should validate provided certificate format and reject invalid ones", () => {
+    const invalidCertPath = path.join(tmpDir, "fake_cert.pem");
+    const invalidKeyPath = path.join(tmpDir, "fake_key.pem");
+
+    fs.writeFileSync(invalidCertPath, "not-a-real-cert");
+    fs.writeFileSync(invalidKeyPath, "not-a-real-key");
+
+    const { status } = (CertManager as any).isCertValid(
+      invalidCertPath,
+      invalidKeyPath,
+    );
+
+    assert.strictEqual(
+      status,
+      false,
+      "Should reject non-PEM formatted certificates and return false status",
+    );
+  });
+
+  test("3. Should fallback to self-signed cert if paths are empty", async () => {
+    const certs = await (CertManager as any).generateFallbackCert();
+
+    assert.ok(certs.cert, "Fallback certificate string should be generated");
+    assert.ok(certs.private, "Fallback private key string should be generated");
+
+    assert.ok(
+      certs.cert.includes("BEGIN CERTIFICATE"),
+      "Generated certificate should be a valid PEM string",
+    );
+    assert.ok(
+      certs.private.includes("PRIVATE KEY"),
+      "Generated key should be a valid PEM string",
+    );
+  });
 });
