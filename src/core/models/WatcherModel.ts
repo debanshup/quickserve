@@ -1,5 +1,5 @@
 import * as chokidar from "chokidar";
-import { WebSocketServer } from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import {
   LogEventTypes,
   LoggerEvents,
@@ -20,6 +20,7 @@ import {
 
 import { DependencyGraph } from "../dependency-manager/DependencyGraph";
 import { Config } from "../../utils/config";
+import { clientRegistry } from "../../store/ClientRegistry";
 
 export class FileWatcher {
   private watcher?: chokidar.FSWatcher;
@@ -49,6 +50,66 @@ export class FileWatcher {
 
   private setIgnoredFiles(ignoredPattern: chokidar.Matcher) {
     this.ignoredFileList = ignoredPattern;
+  }
+
+  /**
+   *
+   *broadcast payload to a specific client
+   */
+
+  public broadcastToPage(
+    resolvedFilePath: string,
+    graph: DependencyGraph,
+    payload: any,
+  ) {
+    if (!this.wsServer) {
+      return;
+    }
+
+    const message = JSON.stringify(payload);
+
+    this.wsServer.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        const state = clientRegistry.get(client);
+        // console.info("state:", state);
+        if (!state || !state.page) {
+          return;
+        }
+
+        const importer = path.resolve(getCurrentDir()! + state.page); // CRITICAL: use str concatenation before resolve
+
+        const isDirectMatch =
+          path.normalize(resolvedFilePath) === path.normalize(importer);
+
+        const isDeepDependency = DependencyGraph.hasDeepImport(
+          graph,
+          importer,
+          resolvedFilePath,
+        );
+
+        if (isDirectMatch || isDeepDependency) {
+          console.info(`[HMR] Sending update to client viewing: ${state.page}`);
+          client.send(message);
+        }
+      }
+    });
+  }
+
+  /**
+   * broadcasts payload to every connected client
+   */
+  public broadcastToAll(payload: any) {
+    if (!this.wsServer) {
+      return;
+    }
+
+    const message = JSON.stringify(payload);
+
+    this.wsServer.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
   }
 
   start(): void {
@@ -114,32 +175,12 @@ export class FileWatcher {
             node = graph.createNode(filePath, textData)!;
           }
           this.watcher?.add([...node.imports]);
-          // console.info("new watched file", this.watcher!.getWatched());
-          // console.info("result::", result);
-
           if (msg && msg.action !== "none") {
-            this.wsServer?.clients.forEach((ws) => {
-              const importer = path.resolve(
-                getCurrentDir()! + (ws as any).page,
-              );
-              // console.info(graph.getNode(importer)?.imports);
-              const deep = DependencyGraph.hasDeepImport(
-                graph,
-                importer,
-                resolvedFilePath,
-              );
-              if (resolvedFilePath === importer || deep) {
-                console.info("sending message");
-                // const payload = { ...result, path: importer };
-                ws.send(JSON.stringify(msg));
-              }
-            });
+            this.broadcastToPage(resolvedFilePath, graph, msg);
           }
         } else {
           msg = { action: "reload" };
-          this.wsServer?.clients.forEach((ws) => {
-            ws.send(JSON.stringify(msg));
-          });
+          this.broadcastToAll(msg);
         }
       } catch (error) {
         console.error(`Watcher Error processing ${filePath}:`, error);
