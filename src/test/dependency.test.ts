@@ -5,7 +5,7 @@ import { DependencyGraph } from "../core/dependency-manager/DependencyGraph";
 import { Node } from "../../src/Types";
 
 suite("HMR DependencyGraph", () => {
-  let graph: DependencyGraph;
+  let depsGraph: DependencyGraph;
   let tmpDir: string;
 
   // create test files and return their absolute paths
@@ -16,7 +16,7 @@ suite("HMR DependencyGraph", () => {
   };
 
   setup(() => {
-    graph = new DependencyGraph();
+    depsGraph = new DependencyGraph();
     // create a unique temporary directory for each test run
     tmpDir = path.join(__dirname, `hmr-tmp-${Date.now()}`);
     if (!fs.existsSync(tmpDir)) {
@@ -29,10 +29,10 @@ suite("HMR DependencyGraph", () => {
     if (fs.existsSync(tmpDir)) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
-    graph.clearGraph();
+    depsGraph.clearGraph();
   });
 
-  test("Extract Imports: Should correctly parse JS, CSS, and HTML", () => {
+  test("1. xtract Imports: Should correctly parse JS, CSS, and HTML", () => {
     // create test files
     const jsPath = createTestFile("main.js", `import { dep } from './dep.js';`);
     const cssPath = createTestFile("style.css", `@import "./vars.css";`);
@@ -47,7 +47,7 @@ suite("HMR DependencyGraph", () => {
     createTestFile("app.js", "console.log('app');");
 
     // test js
-    const jsImports = graph.extractImports(
+    const jsImports = depsGraph.extractImports(
       jsPath,
       fs.readFileSync(jsPath, "utf-8"),
     );
@@ -55,7 +55,7 @@ suite("HMR DependencyGraph", () => {
     assert.strictEqual(jsImports[0], path.join(tmpDir, "dep.js"));
 
     // test css
-    const cssImports = graph.extractImports(
+    const cssImports = depsGraph.extractImports(
       cssPath,
       fs.readFileSync(cssPath, "utf-8"),
     );
@@ -63,7 +63,7 @@ suite("HMR DependencyGraph", () => {
     assert.strictEqual(cssImports[0], path.join(tmpDir, "vars.css"));
 
     // test html
-    const htmlImports = graph.extractImports(
+    const htmlImports = depsGraph.extractImports(
       htmlPath,
       fs.readFileSync(htmlPath, "utf-8"),
     );
@@ -71,30 +71,30 @@ suite("HMR DependencyGraph", () => {
     assert.strictEqual(htmlImports[0], path.join(tmpDir, "app.js"));
   });
 
-  test("Create Node: Should establish bi-directional relationships (imports & importers)", () => {
+  test("2. Create Node: Should establish bi-directional relationships (imports & importers)", () => {
     const parentPath = createTestFile("parent.js", `import './child.js';`);
     const childPath = createTestFile("child.js", `console.log('child');`);
 
     // create node for parent
     const content = fs.readFileSync(parentPath, "utf-8");
-    graph.createNode(parentPath, content);
+    depsGraph.createNode(parentPath, content);
 
     // assert parent node exists and has 'child.js' in its imports
-    const parentNode = graph.getNode(parentPath);
+    const parentNode = depsGraph.getNode(parentPath);
     assert.ok(parentNode);
     assert.ok(parentNode.imports.has(childPath));
 
     // assert child node was implicitly created and has 'parent.js' in its importers
-    const childNode = graph.getNode(childPath);
+    const childNode = depsGraph.getNode(childPath);
     assert.ok(childNode);
     assert.ok(childNode.importers.has(parentPath));
   });
 
-  test("Update Node: Should update an existing node's imports", () => {
+  test("3. Update Node: Should update an existing node's imports", () => {
     const fileA = createTestFile("A.js", "console.log('A');");
 
     // create an initial empty node
-    graph.createNode(fileA, "");
+    depsGraph.createNode(fileA, "");
 
     const newNodeData: Node = {
       imports: new Set(["/fake/path/B.js"]),
@@ -102,36 +102,36 @@ suite("HMR DependencyGraph", () => {
     };
 
     // update the node
-    graph.updateNode(fileA, newNodeData);
+    depsGraph.updateNode(fileA, newNodeData);
 
-    const updatedNode = graph.getNode(fileA);
+    const updatedNode = depsGraph.getNode(fileA);
     assert.ok(updatedNode);
     assert.ok(updatedNode.imports.has("/fake/path/B.js"));
     assert.ok(updatedNode.importers.has("/fake/path/C.js"));
   });
 
-  test("Deep Dependency Analysis: Should detect circular dependencies", () => {
+  test("4. Deep Dependency Analysis: Should detect circular dependencies", () => {
     //  mock
     const fileA = path.resolve(tmpDir, "A.js");
     const fileB = path.resolve(tmpDir, "B.js");
     const fileC = path.resolve(tmpDir, "C.js");
 
     // force inject a cycle: A -> B -> C -> A
-    graph["graph"].set(fileA, {
+    depsGraph["graph"].set(fileA, {
       imports: new Set([fileB]),
       importers: new Set([fileC]),
     });
-    graph["graph"].set(fileB, {
+    depsGraph["graph"].set(fileB, {
       imports: new Set([fileC]),
       importers: new Set([fileA]),
     });
-    graph["graph"].set(fileC, {
+    depsGraph["graph"].set(fileC, {
       imports: new Set([fileA]),
       importers: new Set([fileB]),
     });
 
     // start at A, search if A imports itself (circular)
-    const hasCycle = DependencyGraph.hasDeepImport(graph, fileA, fileA);
+    const hasCycle = DependencyGraph.hasDeepImport(depsGraph, fileA, fileA);
 
     assert.strictEqual(
       hasCycle,
@@ -140,31 +140,31 @@ suite("HMR DependencyGraph", () => {
     );
   });
 
-  test("Find Root CSS: Should traverse up the tree to find the top-level CSS file", () => {
+  test("5. Find Root CSS: Should traverse up the tree to find the top-level CSS file", () => {
     const rootCss = path.resolve(tmpDir, "main.css");
     const childCss = path.resolve(tmpDir, "components.css");
     const varsCss = path.resolve(tmpDir, "vars.css");
 
     // manually setup graph: main.css -> components.css -> vars.css
-    graph["graph"].set(rootCss, {
+    depsGraph["graph"].set(rootCss, {
       imports: new Set([childCss]),
       importers: new Set(),
     });
-    graph["graph"].set(childCss, {
+    depsGraph["graph"].set(childCss, {
       imports: new Set([varsCss]),
       importers: new Set([rootCss]),
     });
-    graph["graph"].set(varsCss, {
+    depsGraph["graph"].set(varsCss, {
       imports: new Set(),
       importers: new Set([childCss]),
     });
 
     // ask it to find the root starting from the bottom-most file
-    const foundRoot = DependencyGraph.findRootCss(graph, varsCss);
+    const foundRoot = DependencyGraph.findRootCss(depsGraph, varsCss);
 
     assert.strictEqual(foundRoot, rootCss);
   });
-  test("Build: Should construct a full graph from an entry file, handling deep and circular dependencies", () => {
+  test("6. Build: Should construct a full graph from an entry file, handling deep and circular dependencies", () => {
     const htmlPath = path.join(tmpDir, "index.html");
     const mainJsPath = path.join(tmpDir, "main.js");
     const utilsJsPath = path.join(tmpDir, "utils.js");
@@ -190,10 +190,10 @@ suite("HMR DependencyGraph", () => {
     fs.writeFileSync(mainJsPath, `import { util } from './utils.js';`);
     fs.writeFileSync(utilsJsPath, `import './main.js'; export const util = 1;`);
 
-    graph.build(htmlPath);
+    depsGraph.build(htmlPath);
 
     // assert Graph Completeness
-    const allNodes = graph.getAllNodes();
+    const allNodes = depsGraph.getAllNodes();
     assert.strictEqual(
       allNodes.length,
       5,
@@ -201,30 +201,30 @@ suite("HMR DependencyGraph", () => {
     );
 
     // assert Forward Edges (Imports)
-    const htmlNode = graph.getNode(htmlPath)!;
+    const htmlNode = depsGraph.getNode(htmlPath)!;
     assert.ok(htmlNode.imports.has(mainJsPath), "HTML should import main.js");
     assert.ok(htmlNode.imports.has(cssPath), "HTML should import style.css");
 
-    const mainNode = graph.getNode(mainJsPath)!;
+    const mainNode = depsGraph.getNode(mainJsPath)!;
     assert.ok(
       mainNode.imports.has(utilsJsPath),
       "main.js should import utils.js",
     );
 
-    const utilsNode = graph.getNode(utilsJsPath)!;
+    const utilsNode = depsGraph.getNode(utilsJsPath)!;
     assert.ok(
       utilsNode.imports.has(mainJsPath),
       "utils.js should import main.js (circular)",
     );
 
-    const cssNode = graph.getNode(cssPath)!;
+    const cssNode = depsGraph.getNode(cssPath)!;
     assert.ok(
       cssNode.imports.has(varsCssPath),
       "style.css should import vars.css",
     );
 
     // assert Reverse Edges (Importers)
-    const varsNode = graph.getNode(varsCssPath)!;
+    const varsNode = depsGraph.getNode(varsCssPath)!;
     assert.ok(
       varsNode.importers.has(cssPath),
       "vars.css should be imported by style.css",
