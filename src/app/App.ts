@@ -169,15 +169,15 @@ export class App implements vscode.Disposable {
         const ext = getFileExtension(req.url!);
 
         let result = fileCache.get(fullReqPath);
-        if (result) {
-          console.info("Serving from ram");
-        }
+        // if (result) {
+        //   console.info("Serving from ram");
+        // }
 
         if (!result) {
-          console.info("Serving from disk");
+          // console.info("Serving from disk");
           const diskData = await processFilesafely(fullReqPath);
           if (!diskData || !diskData.data) {
-            console.warn("null data for::", fullReqPath);
+            // console.warn("null data for::", fullReqPath);
             res.writeHead(404, {
               // Fake 'Success' to keep the browser quiet
               "Content-Type": "text/plain",
@@ -196,18 +196,18 @@ export class App implements vscode.Disposable {
         if (result?.type === "text") {
           let finalData = result.data as string;
           if (!graph.isNodeAvailable(fullReqPath)) {
-            console.info("Node not available, creating node");
+            // console.info("Node not available, creating node");
             graph.build(fullReqPath);
 
             // const maps
-            console.info("Files::", graph.getAllNodes());
+            // console.info("Files::", graph.getAllNodes());
             this.watcher?.add(graph.getAllNodes());
             // this.watcher?.add(fullReqPath);
           }
           if (supportsScriptInjection(ext)) {
             const reloadScript = getReloadScript();
             finalData += reloadScript;
-            console.info("reload script injected with", fullReqPath);
+            // console.info("reload script injected with", fullReqPath);
           }
           const bodyBuffer = Buffer.from(finalData, "utf-8");
           res.writeHead(200, {
@@ -225,7 +225,7 @@ export class App implements vscode.Disposable {
             try {
               await pipeline(result.data as any, res);
             } catch (err) {
-              console.error("Pipeline failed", err);
+              // console.error("Pipeline failed", err);
               if (!res.writableEnded) {
                 res.destroy();
               }
