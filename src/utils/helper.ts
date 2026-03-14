@@ -459,11 +459,11 @@ export async function checkVersion(ctx: vscode.ExtensionContext) {
   const extension = vscode.extensions.getExtension(extensionId);
   const currentVersion = extension?.packageJSON.version;
   const previousVersion = ctx.globalState.get<string>("extensionVersion");
-  console.log(currentVersion, previousVersion);
+  // console.log(currentVersion, previousVersion);
   let uri;
   // clean install
   if (!previousVersion) {
-    console.log("clean install");
+    // console.log("clean install");
     uri = vscode.Uri.joinPath(ctx.extensionUri, "README.md");
     await vscode.commands.executeCommand("markdown.showPreview", uri);
     await ctx.globalState.update("extensionVersion", currentVersion);
@@ -472,7 +472,7 @@ export async function checkVersion(ctx: vscode.ExtensionContext) {
 
   // update
   if (previousVersion !== currentVersion) {
-    console.log("update");
+    // console.log("update");
 
     uri = vscode.Uri.joinPath(ctx.extensionUri, "CHANGELOG.md");
 
