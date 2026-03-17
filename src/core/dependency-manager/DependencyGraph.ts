@@ -12,25 +12,23 @@ import {
 } from "../../constants/supported-extension";
 
 export class DependencyGraph {
-  // [x: string]: any;
   private graph: Map<string, Node> = new Map();
   private visited: Set<string> = new Set();
-
-  /**
-   *
-   *@test for circular dependency
-   */
+  // check for deep import
   static hasDeepImport(
     graph: DependencyGraph,
     start: string,
     target: string,
   ): boolean {
-    const stack = [start];
+    const stack = [target];
     const visited = new Set<string>();
 
     while (stack.length > 0) {
       const current = stack.pop()!;
-      // console.log(`Checking: ${current} -> searching for ${target}`);
+
+      if (current === start) {
+        return true;
+      }
 
       if (visited.has(current)) {
         continue;
@@ -42,16 +40,9 @@ export class DependencyGraph {
         continue;
       }
 
-      if (node.imports.has(target)) {
-        // console.warn(
-        //   `Circular Dependency Found: ${target} is imported by ${current}`,
-        // );
-        return true;
-      }
-
-      for (const dep of node.imports) {
-        if (!visited.has(dep)) {
-          stack.push(dep); // replaces recursive call
+      for (const importer of node.importers) {
+        if (!visited.has(importer)) {
+          stack.push(importer);
         }
       }
     }
@@ -85,14 +76,64 @@ export class DependencyGraph {
       // If no CSS parent is found, it means the current 'current'
       // is the one imported by HTML (or it's an orphan).
       if (!cssParent) {
-        break;
+        return current;
       }
 
-      //  Move up the chain
+      //  move up the chain
       current = path.normalize(cssParent);
     }
 
-    return current;
+    return null;
+  }
+
+  // cleanup graph
+  static cleanUp(
+    graph: DependencyGraph,
+    resolvedPath: string,
+    isHardCleanup = false,
+  ) {
+    const node = graph.getNode(resolvedPath);
+
+    if (!node) {
+      return;
+    }
+    if (isHardCleanup) {
+      graph.deleteNode(resolvedPath);
+    }
+    for (const importFile of node.imports) {
+      const childNode = graph.getNode(importFile);
+      if (childNode) {
+        // delete from child's importers
+
+        childNode.importers.delete(resolvedPath);
+      }
+    }
+    for (const importerFile of node.importers) {
+      const childNode = graph.getNode(importerFile);
+      if (childNode) {
+        // delete from child's imports
+        childNode.imports.delete(resolvedPath);
+      }
+    }
+    // delete from visited
+    if (graph.visited && graph.visited.has(resolvedPath)) {
+      graph.visited.delete(resolvedPath);
+    }
+    // finally delete the node from graph
+    node.imports.clear();
+    // console.info("cleaned up node:", node);
+  }
+
+  /**
+   *
+   * @param resolvedPath
+   * @returns boolean
+   * @description returns entry point by checking importer size === 0; means it is html
+   */
+
+  public isEntryPoint(resolvedPath: string) {
+    const node = this.getNode(resolvedPath);
+    return node !== undefined && node.importers.size === 0;
   }
 
   /**
@@ -355,7 +396,7 @@ export class DependencyGraph {
     return [...new Set(localDeps)];
   }
 
-  extractImports(filePath: string, content: string) {
+  public extractImports(filePath: string, content: string) {
     const ext = path.extname(filePath).toLowerCase();
     const dir = path.dirname(filePath);
 
@@ -427,7 +468,58 @@ export class DependencyGraph {
       existingNode.importers = newNode.importers;
     }
 
-    // console.info("Updated node:", newNode);
+    console.info("Updated node:", newNode);
+  }
+
+  // update node imports
+
+  public updateNodeImports(
+    filePath: string,
+    extractedImports: string[] | Set<string>,
+  ) {
+    const resolvedPath = path.resolve(filePath);
+    const node = this.graph.get(resolvedPath);
+
+    if (!node) {
+      console.warn(
+        `[Graph] Cannot update imports: Node not found for ${resolvedPath}`,
+      );
+      return;
+    }
+
+    const newImports = new Set(extractedImports);
+    const oldImports = node.imports;
+
+    // if an old import is NOT in the new list, the user deleted the import statement.
+    for (const oldImport of oldImports) {
+      if (!newImports.has(oldImport)) {
+        const childNode = this.graph.get(oldImport);
+        if (childNode) {
+          childNode.importers.delete(resolvedPath);
+        }
+      }
+    }
+
+    // if a new import is NOT in the old list, the user just typed a new import statement.
+    for (const newImport of newImports) {
+      if (!oldImports.has(newImport)) {
+        // if the new file isn't in the graph yet, parse it downwards (defensive)
+        if (!this.graph.has(newImport)) {
+          this.build(newImport);
+        }
+
+        // add this file as a parent (importer) of the newly imported file
+        const childNode = this.graph.get(newImport);
+        if (childNode) {
+          childNode.importers.add(resolvedPath);
+        }
+      }
+    }
+
+    // 3. Safely update this node's imports (importers remain untouched!)
+    node.imports = newImports;
+
+    console.info(`[Graph] Delta update complete for: ${resolvedPath}`);
   }
 
   /**
@@ -477,15 +569,15 @@ export class DependencyGraph {
 
     return this.graph.get(resolvedPath);
   }
-  /**
-   * @todo redefine
-   */
+  public hasNode(filePath: string) {
+    return this.graph.has(path.resolve(filePath));
+  }
   public deleteNode(filePath: string) {
     const resolvedPath = path.resolve(filePath);
     return this.graph.delete(resolvedPath);
   }
 
-  public clearGraph() {
+  public clear() {
     this.graph.clear();
   }
 
