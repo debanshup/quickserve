@@ -38,7 +38,10 @@ import {
 } from "../utils/helper";
 import path from "path";
 import { fileCache } from "../cache/FileCache";
-import { graph } from "../core/dependency-manager/DependencyGraph";
+import {
+  DependencyGraph,
+  graph,
+} from "../core/dependency-manager/DependencyGraph";
 import { StatusObserver } from "../core/models/observer/status_observer/StatusObserverModel";
 import {
   StatusEvents,
@@ -93,7 +96,7 @@ export class App implements vscode.Disposable {
   private clearApp() {
     this.server = null;
     this.watcher = null;
-    graph.clearGraph();
+    graph.clear();
   }
 
   public async start() {
@@ -195,19 +198,25 @@ export class App implements vscode.Disposable {
 
         if (result?.type === "text") {
           let finalData = result.data as string;
-          if (!graph.isNodeAvailable(fullReqPath)) {
-            // console.info("Node not available, creating node");
-            graph.build(fullReqPath);
-
-            // const maps
-            // console.info("Files::", graph.getAllNodes());
-            this.watcher?.add(graph.getAllNodes());
-            // this.watcher?.add(fullReqPath);
+          // build for first time
+          if ([".html", ".htm"].includes(ext)) {
+            if (
+              !graph.hasNode(fullReqPath) ||
+              req.headers["cache-control"] === "no-cache"
+            ) {
+              console.info("fresh graph building for:", fullReqPath);
+              if (graph.hasNode(fullReqPath)) {
+                DependencyGraph.cleanUp(graph, fullReqPath, true);
+              }
+              graph.build(fullReqPath);
+              this.watcher?.add(graph.getAllNodes());
+            }
           }
+
+          // add to watcher
           if (supportsScriptInjection(ext)) {
             const reloadScript = getReloadScript();
             finalData += reloadScript;
-            // console.info("reload script injected with", fullReqPath);
           }
           const bodyBuffer = Buffer.from(finalData, "utf-8");
           res.writeHead(200, {
