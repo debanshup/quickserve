@@ -44,8 +44,20 @@ export class FileWatcher {
    * add a file in watcher
    * @returns void
    */
-  add(file: string | string[]): void {
-    this.watcher?.add(file);
+  add(fileOrFiles: string | string[]): void {
+    const files = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+
+    for (const file of files) {
+      const resolvedPath = path.resolve(file);
+      if (!this.watcher?._watched.has(resolvedPath)) {
+        this.watcher?.add(resolvedPath);
+      }
+    }
+  }
+
+  // remove filepath from watcher
+  remove(file: string | string[]) {
+    this.watcher?.unwatch(file);
   }
 
   private setIgnoredFiles(ignoredPattern: chokidar.Matcher) {
@@ -87,6 +99,8 @@ export class FileWatcher {
           resolvedFilePath,
         );
 
+        // console.info("is deep:", isDeepDependency);
+
         if (isDirectMatch || isDeepDependency) {
           console.info(`[HMR] Sending update to client viewing: ${state.page}`);
           client.send(message);
@@ -112,6 +126,15 @@ export class FileWatcher {
     });
   }
 
+  // trigger full reload (for file deletion)
+
+  public triggerFullReload() {
+    this.wsServer?.clients.forEach((client) => {
+      const msg = { action: "reload" };
+      client.send(JSON.stringify(msg));
+    });
+  }
+
   start(): void {
     this.watcher = chokidar.watch([], {
       ignored: this.ignoredFileList,
@@ -121,9 +144,12 @@ export class FileWatcher {
 
     const hmrAnalyzer = new HmrAnalyzer();
     this.watcher.on("change", async (filePath) => {
-      console.info("watched file", this.watcher!.getWatched());
+      // console.info("watched file", this.watcher!.getWatched());
       try {
         const resolvedFilePath = path.resolve(filePath);
+        /**
+         * @critical
+         */
         const newContent = await processFilesafely(filePath);
         fileCache.set(filePath, newContent);
         if (!newContent) {
@@ -161,20 +187,15 @@ export class FileWatcher {
           } else if (ext === ".md") {
             msg = { action: "reload" };
           }
-
-          let node = graph.getNode(filePath);
-          if (node) {
-            console.info("Updating existing node...");
-            graph.updateNode(filePath, {
-              ...node,
-              imports: new Set(graph.extractImports(filePath, textData)),
-            });
-            // console.info(node);
+          // modify imports if applicable
+          if (graph.hasNode(resolvedFilePath)) {
+            const newImports = graph.extractImports(resolvedFilePath, textData);
+            graph.updateNodeImports(resolvedFilePath, newImports);
+            this.add(newImports);
           } else {
-            // fallback
-            node = graph.createNode(filePath, textData)!;
+            // node not available
+            this?.add(filePath);
           }
-          this.watcher?.add([...node.imports]);
           if (msg && msg.action !== "none") {
             this.broadcastToPage(resolvedFilePath, graph, msg);
           }
@@ -189,12 +210,19 @@ export class FileWatcher {
     this.watcher.on("add", (filePath) => {
       LoggerEvents.emit(LogEventTypes.INFO, { msg: `Watching ${filePath}` });
     });
+    // handle deletion of a file
     this.watcher.on("unlink", (filePath) => {
-      /**
-       * @todo:: test
-       */
-      const isDeleted = graph.deleteNode(filePath);
-      console.info("deleting ", filePath, isDeleted);
+      // register as missing
+      const imports = graph.hasNode(filePath)
+        ? graph.getNode(filePath)?.imports
+        : [];
+      DependencyGraph.cleanUp(graph, path.resolve(filePath));
+      // delete cache
+      fileCache.delete(filePath);
+      // unwatch file
+      this.remove(filePath);
+      // trigger full reload
+      this.triggerFullReload();
     });
 
     this.watcher.on("error", (err) => {
