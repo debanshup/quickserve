@@ -29,7 +29,7 @@ suite("HMR DependencyGraph", () => {
     if (fs.existsSync(tmpDir)) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
-    depsGraph.clearGraph();
+    depsGraph.clear();
   });
 
   test("1. extract Imports: Should correctly parse JS, CSS, and HTML", () => {
