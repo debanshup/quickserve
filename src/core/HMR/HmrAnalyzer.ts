@@ -1,4 +1,5 @@
 import { parse, HTMLElement } from "node-html-parser";
+import { WSMessage } from "../../Types";
 
 export class HmrAnalyzer {
   private previousHtml: string = "";
@@ -7,7 +8,7 @@ export class HmrAnalyzer {
    * Analyzes the new HTML content and determines the HMR action.
    * @param newHtml The raw string content of the newly saved HTML file
    */
-  public analyzeHTML(newHtml: string) {
+  public analyzeHTML(newHtml: string): WSMessage {
     // First run: No previous HTML to compare against
     if (!this.previousHtml) {
       // console.info("FIRST TIME CHANGE");
@@ -76,7 +77,9 @@ export class HmrAnalyzer {
         return { action: "reload" };
       }
       // Only safe injection targets changed!
-      const payload: any = { action: "inject" };
+      const payload: WSMessage = {
+        action: "inject",
+      };
 
       if (oldBodyContent !== newBodyContent) {
         payload.body = newBodyContent;
@@ -91,7 +94,7 @@ export class HmrAnalyzer {
     // Nothing meaningful changed (e.g., the user just hit save without editing)
     return { action: "none" };
   }
-  
+
   /**
    * Mutates the AST to remove nodes we handle via Hot Injection.
    */

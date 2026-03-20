@@ -3,14 +3,8 @@ import { WebSocketServer } from "ws";
 import * as http from "http";
 import * as https from "https";
 import { Socket } from "net";
-import {
-  ServerEventTypes,
-  ServerEvents,
-} from "./observer/server_observer/serverEventEmitter";
-import {
-  LogEventTypes,
-  LoggerEvents,
-} from "./observer/log_observer/logEventEmitter";
+import { serverEvents } from "./observer/server_observer/serverEventEmitter";
+import { loggerEvents } from "./observer/log_observer/logEventEmitter";
 
 import { ERROR_MESSAGES } from "../../constants/errorMessages";
 import { CertManager } from "../certificate-manager/CertManager";
@@ -18,9 +12,9 @@ import { clientRegistry } from "../../store/ClientRegistry";
 export class Server {
   wsServer: WebSocketServer | undefined;
   on: boolean = false;
-  port: number | undefined;
+  port: number;
   private server: http.Server | https.Server;
-  private hostname: string | undefined;
+  private hostname: string;
   private connections = new Set<Socket>();
   // private startTime = performance.now();
 
@@ -85,8 +79,8 @@ export class Server {
         // const httpPort = await getAvailablePort()
         this.server.listen({ port: this.port, host: this.hostname }, () => {
           this.on = true;
-          ServerEvents.emit(ServerEventTypes.START, this.port);
-          LoggerEvents.emit(LogEventTypes.INFO, {
+          serverEvents.emit("server:start", this.port!);
+          loggerEvents.emit("info", {
             msg: "server started" + JSON.stringify(this.server!.address()),
           });
           // const end = performance.now();
@@ -128,9 +122,8 @@ export class Server {
 
       this.server.close(() => {
         this.on = false;
-        this.port = undefined;
-        ServerEvents.emit(ServerEventTypes.STOP);
-        LoggerEvents.emit(LogEventTypes.INFO, { msg: "Server stopped" });
+        serverEvents.emit("server:stop");
+        loggerEvents.emit("info", { msg: "Server stopped" });
         resolve();
       });
     });

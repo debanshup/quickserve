@@ -1,9 +1,6 @@
 import * as chokidar from "chokidar";
 import WebSocket, { WebSocketServer } from "ws";
-import {
-  LogEventTypes,
-  LoggerEvents,
-} from "./observer/log_observer/logEventEmitter";
+import { loggerEvents } from "./observer/log_observer/logEventEmitter";
 import { HmrAnalyzer } from "../HMR/HmrAnalyzer";
 import {
   getCurrentDir,
@@ -21,6 +18,8 @@ import {
 import { DependencyGraph } from "../dependency-manager/DependencyGraph";
 import { Config } from "../../utils/config";
 import { clientRegistry } from "../../store/ClientRegistry";
+import { WSMessage } from "../../Types";
+import { dependencyEvents } from "./observer/dependency_observer/dependencyEventEmitter";
 
 export class FileWatcher {
   private watcher?: chokidar.FSWatcher;
@@ -100,7 +99,7 @@ export class FileWatcher {
         );
 
         // console.info("is deep:", isDeepDependency);
-
+        // console.info("message:", message);
         if (isDirectMatch || isDeepDependency) {
           console.info(`[HMR] Sending update to client viewing: ${state.page}`);
           client.send(message);
@@ -159,8 +158,7 @@ export class FileWatcher {
           return;
         }
 
-        let msg = { action: "none" } as Partial<any>;
-
+        let msg: WSMessage = { action: "none" };
         if (Config.getHMREnabled()) {
           const ext = path.extname(filePath).toLowerCase();
 
@@ -177,7 +175,7 @@ export class FileWatcher {
               graph,
               resolvedFilePath,
             );
-            // console.info("ROOTCSS::", rootCSS);
+            console.info("ROOTCSS::", rootCSS);
             msg = {
               action: "css-update",
               path: "/" + getRelativeFilePath(rootCSS ?? filePath),
@@ -189,9 +187,16 @@ export class FileWatcher {
           }
           // modify imports if applicable
           if (graph.hasNode(resolvedFilePath)) {
-            const newImports = graph.extractImports(resolvedFilePath, textData);
-            graph.updateNodeImports(resolvedFilePath, newImports);
-            this.add(newImports);
+            //  emit Dependency event
+            dependencyEvents.emit(
+              "graph:update_node_imports",
+              resolvedFilePath,
+              textData,
+            );
+            const node = graph.getNode(resolvedFilePath);
+            if (node?.imports) {
+              this.add(Array.from(node.imports));
+            }
           } else {
             // node not available
             this?.add(filePath);
@@ -200,6 +205,7 @@ export class FileWatcher {
             this.broadcastToPage(resolvedFilePath, graph, msg);
           }
         } else {
+          this?.add(filePath);
           msg = { action: "reload" };
           this.broadcastToAll(msg);
         }
@@ -208,15 +214,17 @@ export class FileWatcher {
       }
     });
     this.watcher.on("add", (filePath) => {
-      LoggerEvents.emit(LogEventTypes.INFO, { msg: `Watching ${filePath}` });
+      loggerEvents.emit("info", { msg: `Watching ${filePath}` });
     });
     // handle deletion of a file
     this.watcher.on("unlink", (filePath) => {
-      // register as missing
-      const imports = graph.hasNode(filePath)
-        ? graph.getNode(filePath)?.imports
-        : [];
-      DependencyGraph.cleanUp(graph, path.resolve(filePath));
+      //  hard cleanup for deleted node
+      dependencyEvents.emit(
+        "graph:cleanup",
+        graph,
+        path.resolve(filePath),
+        true,
+      );
       // delete cache
       fileCache.delete(filePath);
       // unwatch file
