@@ -1,16 +1,16 @@
 import { EventEmitter } from "events";
+import { TypedEventEmitter } from "../../../event-emitter/TypedEventEmitter";
+import { StartPayload } from "../../../../Types";
 
 // emitter for status:
 
-export const StatusEvents = new EventEmitter();
-
-export enum StatusEventTypes {
-  START = "start",
-  STOP = "stop",
-  SHOW = "show",
-  HIDE = "hide",
-  ERROR = "error",
+interface StatusEventMap {
+  start: [
+    status: StartPayload,
+  ];
+  stop: [];
+  show: [];
+  hide: [];
+  error: [error: Error]; // Assuming error emits an Error object
 }
-
-// implement handler -> start, stop ac to server state
-// show server status and qr code dynamically ac to event
+export const statusEvents = new TypedEventEmitter<StatusEventMap>();
