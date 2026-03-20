@@ -1,10 +1,12 @@
-import EventEmitter from "events";
-export const ServerEvents = new EventEmitter();
 
-export enum ServerEventTypes {
-  START = "server:start",
-  STOP = "server:stop",
-  ERROR = "server:error",
-  NOT_RUNNING = "server:not_running",
-  NO_ACTIVE_PATH = "server:no_active_path",
+import EventEmitter from "events";
+import { TypedEventEmitter } from "../../../event-emitter/TypedEventEmitter";
+interface ServerEventMap {
+  "server:start": [port: number];
+  "server:stop": [];
+  "server:error": [error: Error];
+  "server:not_running": [];
+  "server:no_active_path": [];
 }
+ 
+export const serverEvents = new TypedEventEmitter<ServerEventMap>();
