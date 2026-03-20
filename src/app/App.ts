@@ -4,18 +4,12 @@ import { StatusbarUI } from "../StatusBarUI";
 import { Config } from "../utils/config";
 import { HOST } from "../constants/host";
 
-import { ServerObserver } from "../core/models/observer/server_observer/ServerObserverModel";
-import { LogObserver } from "../core/models/observer/log_observer/LogObserverModel";
+import { ServerObserver } from "../core/models/observer/server_observer/serverObserver";
+import { LogObserver } from "../core/models/observer/log_observer/LogObserver"; 
 
 import { pipeline } from "stream/promises";
-import {
-  LoggerEvents,
-  LogEventTypes,
-} from "../core/models/observer/log_observer/logEventEmitter";
-import {
-  ServerEvents,
-  ServerEventTypes,
-} from "../core/models/observer/server_observer/serverEventEmitter";
+import { loggerEvents } from "../core/models/observer/log_observer/logEventEmitter";
+import { serverEvents } from "../core/models/observer/server_observer/serverEventEmitter";
 import { FileWatcher } from "../core/models/WatcherModel";
 import { Server } from "../core/models/ServerModel";
 import {
@@ -42,11 +36,11 @@ import {
   DependencyGraph,
   graph,
 } from "../core/dependency-manager/DependencyGraph";
-import { StatusObserver } from "../core/models/observer/status_observer/StatusObserverModel";
-import {
-  StatusEvents,
-  StatusEventTypes,
-} from "../core/models/observer/status_observer/StatusEventEmitter";
+import { StatusObserver } from "../core/models/observer/status_observer/StatusObserver";
+import { statusEvents } from "../core/models/observer/status_observer/StatusEventEmitter";
+import { MARKDOWN_EXTENSIONS } from "../constants/supported-extension";
+import { DependencyObserver } from "../core/models/observer/dependency_observer/dependencyObserver";
+import { dependencyEvents } from "../core/models/observer/dependency_observer/dependencyEventEmitter";
 
 export class App implements vscode.Disposable {
   public isRunning: boolean = false;
@@ -56,13 +50,20 @@ export class App implements vscode.Disposable {
   private serverObserver = new ServerObserver();
   private logObserver = new LogObserver();
   private statusObserver = new StatusObserver();
+  private dependencyObserver = new DependencyObserver();
   /**
    * @constructor
    */
   constructor() {
     this.serverObserver.init();
     this.logObserver.init();
-    this.statusObserver.init();
+    // show status on startup
+    if (Config.getshowServerStatusOnStart()) {
+      this.statusObserver.init();
+    }
+    if (Config.getHMREnabled()) {
+      this.dependencyObserver.init();
+    }
     StatusbarUI.init();
     this.isRunning = false;
   }
@@ -103,7 +104,7 @@ export class App implements vscode.Disposable {
     const currentPath = getCurrentDir();
     if (!currentPath) {
       console.log("DEBUG: Early return triggered due to no currentPath");
-      ServerEvents.emit(ServerEventTypes.NO_ACTIVE_PATH);
+      serverEvents.emit("server:no_active_path");
       return;
     }
     let currentFilePath, currentFolderPath;
@@ -127,14 +128,14 @@ export class App implements vscode.Disposable {
 
     await server.start(async (req, res) => {
       // emit request event
-      LoggerEvents.emit(LogEventTypes.HTTP_REQ, {
+      loggerEvents.emit("http_request", {
         method: req.method,
         url: req.url,
       });
 
       // emit response event
       res.on("finish", () => {
-        LoggerEvents.emit(LogEventTypes.HTTP_RES, {
+        loggerEvents.emit("http_response", {
           code: res.statusCode,
           method: req.method,
           url: req.url,
@@ -199,16 +200,14 @@ export class App implements vscode.Disposable {
         if (result?.type === "text") {
           let finalData = result.data as string;
           // build for first time
-          if ([".html", ".htm"].includes(ext)) {
+          if ([...MARKDOWN_EXTENSIONS, ".html", ".htm"].includes(ext)) {
             if (
               !graph.hasNode(fullReqPath) ||
               req.headers["cache-control"] === "no-cache"
             ) {
-              console.info("fresh graph building for:", fullReqPath);
-              if (graph.hasNode(fullReqPath)) {
-                DependencyGraph.cleanUp(graph, fullReqPath, true);
-              }
-              graph.build(fullReqPath);
+              // console.info("fresh graph building for:", fullReqPath);
+              graph.clear();
+              dependencyEvents.emit("graph:build", fullReqPath);
               this.watcher?.add(graph.getAllNodes());
             }
           }
@@ -247,7 +246,7 @@ export class App implements vscode.Disposable {
         console.error(error);
         const err = error as NodeJS.ErrnoException;
         // console.error("ERROR STACK::", err.stack);
-        LoggerEvents.emit(LogEventTypes.ERROR, {
+        loggerEvents.emit("error", {
           error: error as Error,
         });
         const statusCode = getStatusCode(err.code);
@@ -263,12 +262,12 @@ export class App implements vscode.Disposable {
     const isPublicAccessEnabled = Config.getPublicAccessEnabled();
     if (isPublicAccessEnabled) {
       this.publicUrl = `${proto}//${getLocalIP()}:${this.server?.port!.toString()}/`;
-      LoggerEvents.emit(LogEventTypes.CONN_URI, { url: this.publicUrl });
+      loggerEvents.emit("connection_uri", { url: this.publicUrl });
     }
 
-    StatusEvents.emit(StatusEventTypes.START, {
+    statusEvents.emit("start", {
       on: server.on,
-      port: this.server?.port,
+      port: this.server!.port,
       isPublicAccessEnabled,
       publicUrl: this.publicUrl,
     });
@@ -278,17 +277,15 @@ export class App implements vscode.Disposable {
         getConnectionURI(proto, HOST.LOCALHOST, port, relativePath!),
       );
     }
-    // show status if applicable
-    if (Config.getshowServerStatusOnStart()) {
-      StatusEvents.emit(StatusEventTypes.SHOW);
-    }
+
+    statusEvents.emit("show");
 
     // revert ui
     this.isRunning = true;
   }
   public async stop() {
     if (!this.isRunning) {
-      ServerEvents.emit(ServerEventTypes.NOT_RUNNING);
+      serverEvents.emit("server:not_running");
       return;
     }
     // console.time("stop");
@@ -296,13 +293,14 @@ export class App implements vscode.Disposable {
     this.disposeAllObserver();
     this.isRunning = true;
     this.clearApp();
-    StatusEvents.emit(StatusEventTypes.STOP);
+    statusEvents.emit("stop");
   }
 
   private async disposeAllObserver() {
     this.statusObserver.dispose();
     this.serverObserver.dispose();
     this.logObserver.dispose();
+    this.dependencyObserver.dispose();
   }
 
   public async dispose() {
