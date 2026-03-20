@@ -6,6 +6,7 @@ import { ERROR_MESSAGES } from "../../constants/errorMessages";
 import { PATH } from "../../constants/path";
 import fs from "fs";
 import selfsigned from "selfsigned";
+import { SSLConfig } from "../../Types";
 
 export class CertManager {
   protected constructor() {}
@@ -101,10 +102,7 @@ export class CertManager {
     return pems;
   }
 
-  public static async getCert(sslConfig: {
-    certPath: string;
-    keyPath: string;
-  }) {
+  public static async getCert(sslConfig: SSLConfig) {
     const certDir = PATH.CERT_DIR;
     if (!fs.existsSync(certDir)) {
       fs.mkdirSync(certDir);
@@ -142,15 +140,16 @@ export class CertManager {
         //  using default
         if (CertManager.checkMkcert()) {
           // check if mkcert CA already installed
-          const caRoot = execSync("mkcert -CAROOT").toString().trim();
-          console.info("CA root", caRoot);
-          if (!fs.existsSync(caRoot)) {
-            console.info("mkcert CA not installed");
-            execSync("mkcert -install");
-          }
+          // const caRoot = execSync("mkcert -CAROOT").toString().trim();
+          // console.info("CA root", caRoot);
+          // if (!fs.existsSync(caRoot)) {
+          //   console.info("mkcert CA not installed");
+          // }
+          execSync("mkcert -install");
+          console.info("cert path:", certPath);
           execSync(
             `mkcert -cert-file "${certPath}" -key-file "${keyPath}" localhost 127.0.0.1 ::1`,
-            { stdio: "pipe" },
+            { stdio: "inherit" },
           );
           return {
             cert: fs.readFileSync(certPath),
