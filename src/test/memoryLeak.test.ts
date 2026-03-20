@@ -1,34 +1,45 @@
 import assert from "assert";
 import { App } from "../app/App";
-import {
-  LogEventTypes,
-  LoggerEvents,
-} from "../core/models/observer/log_observer/logEventEmitter";
-import {
-  ServerEventTypes,
-  ServerEvents,
-} from "../core/models/observer/server_observer/serverEventEmitter";
-import {
-  StatusEventTypes,
-  StatusEvents,
-} from "../core/models/observer/status_observer/StatusEventEmitter";
+import { loggerEvents } from "../core/models/observer/log_observer/logEventEmitter";
+import { serverEvents } from "../core/models/observer/server_observer/serverEventEmitter";
+import { statusEvents } from "../core/models/observer/status_observer/StatusEventEmitter";
+import { dependencyEvents } from "../core/models/observer/dependency_observer/dependencyEventEmitter";
 
 suite("App Lifecycle & Memory Management", () => {
   const emittersToTest = [
     {
-      name: "LoggerEvents",
-      emitter: LoggerEvents,
-      events: Object.values(LogEventTypes),
+      name: "loggerEvents",
+      emitter: loggerEvents,
+      events: [
+        "info",
+        "connection_uri",
+        "http_request",
+        "http_response",
+        "error",
+        "warn",
+        "debug",
+      ],
     },
     {
-      name: "ServerEvents",
-      emitter: ServerEvents,
-      events: Object.values(ServerEventTypes),
+      name: "serverEvents",
+      emitter: serverEvents,
+      events: [
+        "server:start",
+        "server:stop",
+        "server:error",
+        "server:not_running",
+        "server:no_active_path",
+      ],
     },
     {
-      name: "StatusEvents",
-      emitter: StatusEvents,
-      events: Object.values(StatusEventTypes),
+      name: "dependencyEvents",
+      emitter: dependencyEvents,
+      events: ["graph:build", "graph:update_node_imports", "graph:cleanup"],
+    },
+    {
+      name: "statusEvents",
+      emitter: statusEvents,
+      events: ["start", "stop", "show", "hide", "error"],
     },
   ];
 
@@ -36,8 +47,7 @@ suite("App Lifecycle & Memory Management", () => {
     const counts = new Map<string, number>();
     for (const { name, emitter, events } of emittersToTest) {
       for (const event of events) {
-        const eventKey = String(event);
-        counts.set(`${name}:${eventKey}`, emitter.listenerCount(eventKey));
+        counts.set(`${name}:${event}`, emitter.listenerCount(event));
       }
     }
     return counts;
