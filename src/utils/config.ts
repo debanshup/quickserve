@@ -1,4 +1,5 @@
 import vscode from "vscode";
+import { SSLConfig } from "../Types";
 const config = vscode.workspace.getConfiguration("quickserve");
 
 export class Config {
@@ -20,7 +21,7 @@ export class Config {
   public static getHMREnabled() {
     return config.get<boolean>("enableHMR");
   }
-
+ 
   /**
    *
    * @returns show statusbar enabled
@@ -50,8 +51,8 @@ export class Config {
    *
    * @returns public access enabled
    */
-  public static getPublicAccessEnabled(): boolean | undefined {
-    return config.get<boolean>("publicAccess");
+  public static getPublicAccessEnabled(): boolean {
+    return config.get<boolean>("publicAccess")!;
   }
 
   public static isHttpsEnabled() {
@@ -59,7 +60,7 @@ export class Config {
   }
 
   public static getSSLConfig() {
-    return config.get<{ certPath: string; keyPath: string }>("sslConfig");
+    return config.get<SSLConfig>("sslConfig");
   }
 
   public static getOpenBrowserEnabled() {
