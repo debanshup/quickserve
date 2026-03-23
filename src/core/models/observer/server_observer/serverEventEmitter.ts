@@ -6,6 +6,7 @@ interface ServerEventMap {
   "server:stop": [];
   "server:error": [error: Error];
   "server:not_running": [];
+  "server:already_running": [];
   "server:no_active_path": [];
 }
  
