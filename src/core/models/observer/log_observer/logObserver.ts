@@ -31,7 +31,6 @@ export class LogObserver {
 
   public dispose() {
     loggerEvents.removeAllListeners();
-    console.info("removed all log listener");
   }
 
   /**
