@@ -5,6 +5,7 @@ export const ERROR_MESSAGES = {
   NO_USABLE_PORT:
     "No usable port found. Please check if another process is already using the required port.",
   SERVER_NOT_STARTED: "Server has not started yet!",
+  SERVER_ALREADY_RUNNING: "Server is already running!",
   SSL_CONFIG_ERROR:
     "Invalid SSL Config: Both certPath and keyPath must be provided.",
   CERT_BINDING_ERROR: "Binding error! Certificate and key do not match.",
