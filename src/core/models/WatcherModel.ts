@@ -1,6 +1,6 @@
 import * as chokidar from "chokidar";
 import WebSocket, { WebSocketServer } from "ws";
-import { loggerEvents } from "./observer/log_observer/logEventEmitter";
+// import { loggerEvents } from "./observer/log_observer/logEventEmitter";
 import { HmrAnalyzer } from "../HMR/HmrAnalyzer";
 import {
   getCurrentDir,
@@ -24,7 +24,7 @@ import { dependencyEvents } from "./observer/dependency_observer/dependencyEvent
 export class FileWatcher {
   private watcher?: chokidar.FSWatcher;
   private wsServer?: WebSocketServer;
-  private files: string | any;
+  // private files: string | any;
   private ignoredFileList: chokidar.Matcher = [] as unknown as chokidar.Matcher;
 
   /**
@@ -213,9 +213,7 @@ export class FileWatcher {
         console.error(`Watcher Error processing ${filePath}:`, error);
       }
     });
-    this.watcher.on("add", (filePath) => {
-      loggerEvents.emit("info", { msg: `Watching ${filePath}` });
-    });
+
     // handle deletion of a file
     this.watcher.on("unlink", (filePath) => {
       //  hard cleanup for deleted node
