@@ -16,6 +16,7 @@ const { getHttpServerPort, getPublicAccessEnabled } = Config;
 import os from "os";
 import { PATH } from "../constants/path";
 import { HMR_CLIENT } from "../constants/reload-client";
+import { ServerContext } from "../store/ServerContext";
 // all text extension
 const ALL_TEXT_EXTS = new Set([
   ...TEXT_EXTENSIONS,
@@ -66,6 +67,27 @@ export function getLocalIP(): string {
     }
   }
   return "localhost"; // fallback
+}
+
+/**
+ *
+ * @param workspaceRootPath
+ * @returns the relative file path, or an empty string if an invalid tab is open.
+ */
+
+export function getSafeRelativePath(workspaceRootPath: string) {
+  const editor = vscode.window.activeTextEditor;
+  console.info("root path:", workspaceRootPath);
+  console.info("scheme:", editor!.document.uri.scheme);
+  if (!editor || editor.document.uri.scheme !== "file") {
+    return "";
+  }
+  const activePath = editor.document.uri.fsPath;
+  console.info("active path:", activePath);
+  if (activePath.startsWith(workspaceRootPath)) {
+    return path.relative(workspaceRootPath, activePath);
+  }
+  return "";
 }
 
 /**
@@ -454,30 +476,61 @@ export function getMimeType(ext: string): string {
   return types[ext.toLowerCase()] || "application/octet-stream";
 }
 
-export async function checkVersion(ctx: vscode.ExtensionContext) {
+export async function handleVersionUpdate(ctx: vscode.ExtensionContext) {
   const extensionId = "debanshupanigrahi.quickserve";
   const extension = vscode.extensions.getExtension(extensionId);
   const currentVersion = extension?.packageJSON.version;
   const previousVersion = ctx.globalState.get<string>("extensionVersion");
-  // console.log(currentVersion, previousVersion);
-  let uri;
-  // clean install
+  //clean Install
   if (!previousVersion) {
-    // console.log("clean install");
-    uri = vscode.Uri.joinPath(ctx.extensionUri, "README.md");
+    const uri = vscode.Uri.joinPath(ctx.extensionUri, "README.md");
     await vscode.commands.executeCommand("markdown.showPreview", uri);
     await ctx.globalState.update("extensionVersion", currentVersion);
     return;
   }
 
-  // update
+  // updated
   if (previousVersion !== currentVersion) {
-    // console.log("update");
-
-    uri = vscode.Uri.joinPath(ctx.extensionUri, "CHANGELOG.md");
-
+    const uri = vscode.Uri.joinPath(ctx.extensionUri, "WHATS_NEW.md");
     await vscode.commands.executeCommand("markdown.showPreview", uri);
-
     await ctx.globalState.update("extensionVersion", currentVersion);
+  }
+}
+
+/**
+ * Safely opens a specific file in the browser via QuickServe.
+ * If no URI is provided, it falls back to the currently active editor tab.
+ */
+
+export function openWithQuickServe(clickedUri?: vscode.Uri): void {
+  let targetUri = clickedUri;
+
+  if (!targetUri && vscode.window.activeTextEditor) {
+    targetUri = vscode.window.activeTextEditor.document.uri;
+  }
+
+  if (!targetUri || targetUri.scheme !== "file") {
+    return;
+  }
+
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (!workspaceFolder) {
+    return;
+  }
+
+  const rootPath = workspaceFolder.uri.fsPath;
+  const filePath = targetUri.fsPath;
+
+  if (filePath.startsWith(rootPath)) {
+    const relativePath = path.relative(rootPath, filePath);
+    const port = ServerContext.port;
+    const proto = ServerContext.proto;
+    const host = ServerContext.host;
+    const uriToOpen = getConnectionURI(proto, host, port, relativePath);
+    vscode.env.openExternal(uriToOpen);
+  } else {
+    vscode.window.showWarningMessage(
+      "This file is outside the currently served QuickServe directory.",
+    );
   }
 }

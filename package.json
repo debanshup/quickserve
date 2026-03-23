@@ -8,6 +8,10 @@
   },
   "publisher": "debanshupanigrahi",
   "icon": "images/logo.png",
+  "galleryBanner": {
+    "color": "#1A2227",
+    "theme": "dark"
+  },
   "categories": [
     "Testing",
     "Debuggers",
@@ -24,26 +28,58 @@
     "commands": [
       {
         "command": "quickserve.run",
-        "title": "run"
+        "title": "Start QuickServe",
+        "enablement": "!quickserve.isRunning"
       },
       {
         "command": "quickserve.kill",
-        "title": "kill"
+        "title": "Stop QuickServe",
+        "enablement": "quickserve.isRunning"
+      },
+      {
+        "command": "quickserve.openFile",
+        "title": "Open with QuickServe"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "quickserve.run",
+          "group": "quickserve@1",
+          "when": "(resourceLangId == html || resourceLangId == markdown) && !quickserve.isRunning"
+        },
+        {
+          "command": "quickserve.openFile",
+          "group": "quickserve@1",
+          "when": "(resourceLangId == html || resourceLangId == markdown) && quickserve.isRunning"
+        },
+        {
+          "command": "quickserve.kill",
+          "group": "quickserve@2",
+          "when": "resourceLangId == html || resourceLangId == markdown"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "quickserve.run",
+          "group": "quickserve@1",
+          "when": "(resourceLangId == html || resourceLangId == markdown) && !quickserve.isRunning"
+        },
+        {
+          "command": "quickserve.openFile",
+          "group": "quickserve@1",
+          "when": "(resourceLangId == html || resourceLangId == markdown) && quickserve.isRunning"
+        },
+        {
+          "command": "quickserve.kill",
+          "group": "quickserve@2",
+          "when": "resourceLangId == html || resourceLangId == markdown"
+        }
+      ]
+    },
     "configuration": {
       "title": "QuickServe Configuration",
       "properties": {
-        "quickserve.publicAccess": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable network access to allow other devices (phones, tablets, or other PCs) on your local network to connect to the server."
-        },
-        "quickserve.https": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Enable HTTPS. Required for testing features that demand a **Secure Context**, such as Service Workers, Clipboard API, or Geolocation."
-        },
         "quickserve.port": {
           "type": "number",
           "default": 3000,
@@ -51,13 +87,44 @@
           "maximum": 65535,
           "description": "The local port number the server will listen on. If the port is in use, QuickServe may fail to start."
         },
-        "quickserve.sslConfig": {
+        "quickserve.publicAccess": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable network access to allow other devices (phones, tablets, or other PCs) on your local network to connect to the server."
+        },
+        "quickserve.https": {
           "type": "object",
+          "markdownDescription": "### **HTTPS & SSL Configuration**\nEnable HTTPS for testing features that demand a **Secure Context** (Service Workers, Clipboard API, etc.).\n\n#### **Self-Healing Mode**\nIf `certPath` and `keyPath` are empty, QuickServe automatically manages security:\n1. **With `mkcert`:** Generates a fully **trusted local certificate** (local install required).\n2. **Fallback:** Generates a **standard self-signed certificate** (browser warning).",
           "default": {
+            "enable": false,
             "certPath": "",
             "keyPath": ""
           },
-          "markdownDescription": "Paths to custom SSL certificate and key files. If left empty, QuickServe will automatically generate a **self-signed certificate**."
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": false,
+              "description": "Set to true to activate HTTPS."
+            },
+            "certPath": {
+              "type": "string",
+              "default": "",
+              "description": "Full path to custom SSL certificate file (.crt or .pem)."
+            },
+            "keyPath": {
+              "type": {
+                "type": "string"
+              },
+              "default": "",
+              "description": "Full path to custom SSL key file (.key)."
+            }
+          },
+          "required": [
+            "enable",
+            "certPath",
+            "keyPath"
+          ],
+          "additionalProperties": false
         },
         "quickserve.enableWatcher": {
           "type": "boolean",
@@ -66,7 +133,7 @@
         },
         "quickserve.enableHMR": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "markdownDescription": "Enable **Hot Module Replacement (HMR)**. This allows CSS and assets to update instantly without a full page reload, preserving the current application state. \n\n> **Note:** This feature requires `quickserve.enableWatcher` to be enabled so the file watcher can detect changes."
         },
         "quickserve.showStatusbar": {
@@ -105,15 +172,14 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test",
-    "release": "standard-version",
-    "prerelease": "standard-version --prerelease beta"
+    "release": "standard-version --skip.changelog",
+    "prerelease": "standard-version --skip.changelog --prerelease beta"
   },
   "devDependencies": {
     "@types/css": "^0.0.38",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/qrcode-terminal": "^0.12.2",
-    "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.100.0",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
