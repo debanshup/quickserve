@@ -1,33 +1,36 @@
 import vscode from "vscode";
 import { SSLConfig } from "../Types";
-const config = vscode.workspace.getConfiguration("quickserve");
 
 export class Config {
+  private static getConfig() {
+    return vscode.workspace.getConfiguration("quickserve");
+  }
+
   /**
    *
    * @returns http server port
    */
   public static getHttpServerPort(): number | undefined {
-    return config.get<number>("port", 3000);
+    return Config.getConfig().get<number>("port", 3000);
   }
   /**
    *
    * @returns auto reload enabled
    */
   public static getWatcherEnabled(): boolean {
-    return config.get<boolean>("enableWatcher", true);
+    return Config.getConfig().get<boolean>("enableWatcher", true);
   }
 
   public static getHMREnabled() {
-    return config.get<boolean>("enableHMR");
+    return Config.getConfig().get<boolean>("enableHMR");
   }
- 
+
   /**
    *
    * @returns show statusbar enabled
    */
   public static getShowStatusBar(): boolean {
-    return config.get<boolean>("showStatusbar")!;
+    return Config.getConfig().get<boolean>("showStatusbar")!;
   }
 
   /**
@@ -36,7 +39,7 @@ export class Config {
    */
 
   public static getShowInfoMessages(): boolean | undefined {
-    return config.get<boolean>("showInfoMessages");
+    return Config.getConfig().get<boolean>("showInfoMessages");
   }
 
   /**
@@ -45,25 +48,25 @@ export class Config {
    */
 
   public static getshowServerStatusOnStart() {
-    return config.get<boolean>("showServerStatusOnStart");
+    return Config.getConfig().get<boolean>("showServerStatusOnStart");
   }
   /**
    *
    * @returns public access enabled
    */
   public static getPublicAccessEnabled(): boolean {
-    return config.get<boolean>("publicAccess")!;
+    return Config.getConfig().get<boolean>("publicAccess")!;
   }
 
   public static isHttpsEnabled() {
-    return config.get<boolean>("https");
+    return Config.getConfig().get<boolean>("https.enable")!;
   }
 
   public static getSSLConfig() {
-    return config.get<SSLConfig>("sslConfig");
+    return Config.getConfig().get<SSLConfig>("https");
   }
 
   public static getOpenBrowserEnabled() {
-    return config.get<boolean>("openBrowser");
+    return Config.getConfig().get<boolean>("openBrowser");
   }
 }
