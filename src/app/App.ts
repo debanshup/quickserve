@@ -29,7 +29,6 @@ import {
   getReloadScript,
   getStatusCode,
   getErrorPage,
-  getRelativeFilePath,
   getLocalIP,
   getConnectionURI,
   getSafeRelativePath,
@@ -108,12 +107,10 @@ export class App implements vscode.Disposable {
         serverEvents.emit("server:no_active_path");
         return;
       }
-      let currentFilePath, currentFolderPath;
+      let currentFolderPath;
       if (isFolder(rootPath!)) {
         currentFolderPath = rootPath;
-        currentFilePath = getCurrentFile();
       } else {
-        currentFilePath = rootPath;
         currentFolderPath = path.dirname(rootPath);
       }
       const hostname = getHost();
@@ -267,31 +264,32 @@ export class App implements vscode.Disposable {
         loggerEvents.emit("connection_uri", { url: this.publicUrl });
       }
 
-      statusEvents.emit("start", {
-        on: server.on,
-        port: this.server!.port,
-        isPublicAccessEnabled,
-        publicUrl: this.publicUrl,
-      });
       // open with a browser if enabled
       if (Config.getOpenBrowserEnabled()) {
         const safePath = getSafeRelativePath(currentFolderPath);
+        // console.info("safe path", safePath);
         vscode.env.openExternal(
           getConnectionURI(proto, HOST.LOCALHOST, port, safePath!),
         );
       }
-      // this.isRunning = true;
       // save startup context
       ServerContext.isRunning = true;
       ServerContext.port = port;
       ServerContext.proto = proto;
       ServerContext.host = HOST.LOCALHOST;
       ServerContext.rootPath = rootPath;
+      serverEvents.emit("server:start", port);
       await vscode.commands.executeCommand(
         "setContext",
         "quickserve.isRunning",
         true,
       );
+      statusEvents.emit("start", {
+        on: server.on,
+        port: this.server!.port,
+        isPublicAccessEnabled,
+        publicUrl: this.publicUrl,
+      });
       statusEvents.emit("show");
     }
   }
@@ -300,15 +298,15 @@ export class App implements vscode.Disposable {
       serverEvents.emit("server:not_running");
       return;
     }
-    // console.time("stop");
     await Promise.all([this.server!.stop(), this.watcher?.stop()]);
     this.disposeAllObserver();
-    ServerContext.isRunning = false;
+    ServerContext.clear();
     await vscode.commands.executeCommand(
       "setContext",
       "quickserve.isRunning",
       false,
     );
+    serverEvents.emit("server:stop");
     this.clearApp();
     statusEvents.emit("stop");
   }
