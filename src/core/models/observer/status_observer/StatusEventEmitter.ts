@@ -1,4 +1,3 @@
-import { EventEmitter } from "events";
 import { TypedEventEmitter } from "../../../event-emitter/TypedEventEmitter";
 import { StartPayload } from "../../../../Types";
 
