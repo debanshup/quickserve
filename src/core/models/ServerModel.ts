@@ -7,7 +7,7 @@ import { ERROR_MESSAGES } from "../../constants/errorMessages";
 import { CertManager } from "../certificate-manager/CertManager";
 import { clientRegistry } from "../../store/ClientRegistry";
 import { SSLConfig } from "../../Types";
-import { serverEvents } from "./observer/server_observer/serverEventEmitter";
+// import { serverEvents } from "./observer/server_observer/serverEventEmitter";
 export class Server {
   wsServer: WebSocketServer | undefined;
   on: boolean = false;
@@ -77,7 +77,6 @@ export class Server {
         // const httpPort = await getAvailablePort()
         this.server.listen({ port: this.port, host: this.hostname }, () => {
           this.on = true;
-          serverEvents.emit("server:start", this.port!);
           // loggerEvents.emit("info", {
           //   msg: "server started" + JSON.stringify(this.server!.address()),
           // });
@@ -108,7 +107,6 @@ export class Server {
   stop(): Promise<void> {
     return new Promise((resolve) => {
       if (!this.server) {
-        serverEvents.emit("server:not_running");
         resolve();
         return;
       }
@@ -121,7 +119,6 @@ export class Server {
 
       this.server.close(() => {
         this.on = false;
-        serverEvents.emit("server:stop");
         // loggerEvents.emit("info", { msg: "Server stopped" });
 
         resolve();

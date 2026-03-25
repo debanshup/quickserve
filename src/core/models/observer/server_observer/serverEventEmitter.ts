@@ -1,5 +1,3 @@
-
-import EventEmitter from "events";
 import { TypedEventEmitter } from "../../../event-emitter/TypedEventEmitter";
 interface ServerEventMap {
   "server:start": [port: number];
