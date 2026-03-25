@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-export const logger = vscode.window.createOutputChannel("quickserve_log", {
+export const logger = vscode.window.createOutputChannel("quickserve:log", {
   log: true,
 });
 // logger.show(true);
