@@ -38,7 +38,8 @@
       },
       {
         "command": "quickserve.openFile",
-        "title": "Open with QuickServe"
+        "title": "Open with QuickServe",
+        "enablement": "quickserve.isRunning"
       }
     ],
     "menus": {
