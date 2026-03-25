@@ -78,7 +78,7 @@ export function getLocalIP(): string {
 export function getSafeRelativePath(workspaceRootPath: string) {
   const editor = vscode.window.activeTextEditor;
   console.info("root path:", workspaceRootPath);
-  console.info("scheme:", editor!.document.uri.scheme);
+  // console.info("scheme:", editor!.document.uri.scheme);
   if (!editor || editor.document.uri.scheme !== "file") {
     return "";
   }
