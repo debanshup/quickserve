@@ -2,7 +2,12 @@
 
 # QuickServe
 
-![Logo](https://github.com/debanshup/quickserve/blob/main/images/logo.png?raw=true)
+## ![Logo](https://github.com/debanshup/quickserve/blob/main/images/logo.png?raw=true)
+
+[![Installs](https://img.shields.io/vscode-marketplace/d/debanshupanigrahi.quickserve.svg)](https://marketplace.visualstudio.com/items?itemName=debanshupanigrahi.quickserve)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/debanshupanigrahi.quickserve?label=Rating)](https://marketplace.visualstudio.com/items?itemName=debanshupanigrahi.quickserve)
+[![GitHub issues](https://img.shields.io/github/issues/debanshup/quickserve)](https://github.com/debanshup/quickserve/issues)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/debanshup/quickserve/blob/main/LICENSE)
 
 **QuickServe** is a zero-config local development server for VSCode. Open a workspace, start the server, and instantly preview your HTML and Markdown files — no setup, no config, no friction.
 
