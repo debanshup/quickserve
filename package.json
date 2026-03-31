@@ -13,8 +13,8 @@
     "theme": "dark"
   },
   "categories": [
-    "Testing",
     "Visualization",
+    "Testing",
     "Other"
   ],
   "activationEvents": [
@@ -208,10 +208,15 @@
   },
   "keywords": [
     "live server",
+    "local server",
     "dev server",
-    "localhost",
+    "live reload",
+    "hot reload",
     "hmr",
-    "https"
+    "https server",
+    "html preview",
+    "markdown preview",
+    "localhost"
   ],
   "author": "Debanshu Panigrahi <debanshupanigrahi@gmail.com>",
   "license": "MIT",
