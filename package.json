@@ -1,7 +1,7 @@
 {
   "name": "quickserve",
   "displayName": "QuickServe",
-  "description": "The ultimate zero-config dev server. Features Hot Module Replacement, automatic HTTPS certificates, and QR code for mobile testing.",
+  "description": "Zero-config local development server with Hot Module Replacement (HMR), automatic HTTPS, and QR code for mobile testing. Instantly preview HTML and MARKDOWN — no setup required.",
   "version": "1.3.0",
   "engines": {
     "vscode": "^1.100.0"
