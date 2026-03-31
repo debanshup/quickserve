@@ -164,7 +164,12 @@ export class FileWatcher {
 
           const textData = newContent.data as string;
 
-          if (ext === ".html" || ext === ".htm") {
+          if (
+            ext === ".html" ||
+            ext === ".htm" ||
+            ext === ".md" ||
+            ext === "markdown"
+          ) {
             msg = hmrAnalyzer.analyzeHTML(textData);
           } else if (STYLE_EXTENSIONS.includes(ext)) {
             /**
@@ -182,9 +187,10 @@ export class FileWatcher {
             };
           } else if (SCRIPT_EXTENSIONS.includes(ext)) {
             msg = { action: "reload" };
-          } else if (ext === ".md") {
-            msg = { action: "reload" };
           }
+          //   else if (ext === ".md") {
+          //   msg = { action: "reload" };
+          // }
           // modify imports if applicable
           if (graph.hasNode(resolvedFilePath)) {
             //  emit Dependency event

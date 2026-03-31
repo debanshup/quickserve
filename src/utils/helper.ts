@@ -236,6 +236,121 @@ export function getCurrentDir(): string | undefined {
   return workspaceFolders[0].uri.fsPath;
 }
 
+export function wrapHtmlDocument(
+  bodyContent: string,
+  title: string = "Preview",
+): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #24292f;
+      --text-muted: #57606a;
+      --border-color: #d0d7de;
+      --code-bg: #f6f8fa;
+      --pre-bg: #f6f8fa;
+      --link-color: #0969da;
+      --table-row-alt: #f6f8fa;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #0d1117;
+        --text-color: #c9d1d9;
+        --text-muted: #8b949e;
+        --border-color: #30363d;
+        --code-bg: rgba(110, 118, 129, 0.4);
+        --pre-bg: #161b22;
+        --link-color: #58a6ff;
+        --table-row-alt: #161b22;
+      }
+    }
+
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; 
+      line-height: 1.5; 
+      max-width: 900px; 
+      margin: 0 auto; 
+      padding: 2rem 1rem; 
+      background-color: var(--bg-color);
+      color: var(--text-color); 
+      word-wrap: break-word;
+    }
+    
+    a { color: var(--link-color); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    h1, h2 { 
+      border-bottom: 1px solid var(--border-color); 
+      padding-bottom: 0.3em; 
+      margin-top: 24px; 
+      margin-bottom: 16px; 
+    }
+    
+    h1, h2, h3, h4, h5, h6 { 
+      margin-top: 24px; 
+      margin-bottom: 16px; 
+      font-weight: 600; 
+      line-height: 1.25; 
+    }
+
+    pre { 
+      background-color: var(--pre-bg); 
+      padding: 16px; 
+      border-radius: 6px; 
+      overflow-x: auto; 
+      border: 1px solid var(--border-color);
+    }
+    
+    code { 
+      background-color: var(--code-bg); 
+      padding: 0.2em 0.4em; 
+      border-radius: 6px; 
+      font-size: 85%; 
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; 
+    }
+    
+    pre code { 
+      background-color: transparent; 
+      padding: 0; 
+      font-size: 100%; 
+      border: 0; 
+    }
+
+    img { max-width: 100%; box-sizing: content-box; background-color: var(--bg-color); }
+    
+    blockquote { 
+      border-left: 0.25em solid var(--border-color); 
+      margin: 0; 
+      padding: 0 1em; 
+      color: var(--text-muted); 
+    }
+    
+    table { border-collapse: collapse; width: 100%; margin-top: 0; margin-bottom: 16px; }
+    th, td { border: 1px solid var(--border-color); padding: 6px 13px; }
+    tr { background-color: var(--bg-color); border-top: 1px solid var(--border-color); }
+    tr:nth-child(2n) { background-color: var(--table-row-alt); }
+    
+    hr {
+      height: 0.25em;
+      padding: 0;
+      margin: 24px 0;
+      background-color: var(--border-color);
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  ${bodyContent}
+</body>
+</html>`;
+}
+
 /**
  * Checks if a file or directory exists at the given path.
  *
@@ -265,14 +380,19 @@ export async function processFilesafely(filePath: string) {
 
   if (stats.size < MAX_AST_PARSE_SIZE) {
     const data = await fsPromise.readFile(filePath, { encoding });
+    let parsedData = data;
+    let finalContentType = getMimeType(ext);
+    if (MARKDOWN_EXTENSIONS.includes(ext)) {
+      const rawHtml = marked.parse(data as string, { async: false });
+      parsedData = wrapHtmlDocument(rawHtml as string, path.basename(filePath));
+      finalContentType = "text/html";
+    }
     return {
       type: isText ? "text" : "binary",
       path: filePath,
       size: stats.size,
-      data: MARKDOWN_EXTENSIONS.includes(ext)
-        ? marked.parse(data as string, { async: false })
-        : data,
-      contentType: getMimeType(ext),
+      data: parsedData,
+      contentType: finalContentType,
     };
   }
   const stream = fs.createReadStream(filePath, { encoding });
@@ -316,28 +436,34 @@ export function supportsScriptInjection(ext: string): boolean {
 }
 
 /**
- *  @function listFilesRecursive(dir) recursively list all the files of a specified directory.
+ *  @function listFilesRecursive(dir) recursively list all the files (excluding node_modules) of a specified directory.
  */
 export function listFilesRecursive(dir: string, baseDir: string): any[] {
-  return fs.readdirSync(dir).map((file) => {
-    const fullPath = path.join(dir, file);
-    const isDir = fs.lstatSync(fullPath).isDirectory();
+  return (
+    fs
+      .readdirSync(dir)
+      // filter node_modules
+      .filter((file) => file.toLowerCase() !== "node_modules")
+      .map((file) => {
+        const fullPath = path.join(dir, file);
+        const isDir = fs.lstatSync(fullPath).isDirectory();
 
-    const relativePath = path
-      .relative(baseDir, fullPath)
-      .split(path.sep)
-      .join("/"); // normalize
+        const relativePath = path
+          .relative(baseDir, fullPath)
+          .split(path.sep)
+          .join("/"); // normalize
 
-    return {
-      name: file,
-      type: isDir ? "folder" : "file",
-      path: fullPath,
-      url: `/${relativePath}`, // relative URL
-      ...(isDir && {
-        children: listFilesRecursive(fullPath, baseDir),
-      }),
-    };
-  });
+        return {
+          name: file,
+          type: isDir ? "folder" : "file",
+          path: fullPath,
+          url: `/${relativePath}`, // relative URL
+          ...(isDir && {
+            children: listFilesRecursive(fullPath, baseDir),
+          }),
+        };
+      })
+  );
 }
 
 /**
