@@ -1,7 +1,7 @@
 {
   "name": "quickserve",
   "displayName": "QuickServe",
-  "description": "The ultimate zero-config dev server. Features Hot Module Replacement, automatic HTTPS certificates, and QR code for mobile testing.",
+  "description": "Zero-config local development server with Hot Module Replacement (HMR), automatic HTTPS, and QR code for mobile testing. Instantly preview HTML and MARKDOWN — no setup required.",
   "version": "1.2.0",
   "engines": {
     "vscode": "^1.100.0"
@@ -13,8 +13,8 @@
     "theme": "dark"
   },
   "categories": [
-    "Testing",
     "Visualization",
+    "Testing",
     "Other"
   ],
   "activationEvents": [
@@ -207,12 +207,17 @@
     "ws": "^8.18.2"
   },
   "keywords": [
-    "live server",
-    "dev server",
-    "localhost",
-    "hmr",
-    "https"
-  ],
+  "live server",
+  "local server",
+  "dev server",
+  "live reload",
+  "hot reload",
+  "hmr",
+  "https server",
+  "html preview",
+  "markdown preview",
+  "localhost"
+],
   "author": "Debanshu Panigrahi <debanshupanigrahi@gmail.com>",
   "license": "MIT",
   "bugs": {
