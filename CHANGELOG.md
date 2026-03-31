@@ -2,6 +2,17 @@
 
 # Changelog
 
+## [1.3.0] (2026-03-31)
+
+### Added
+
+- HMR support for Markdown files
+- Improved Markdown preview (GitHub-style minimal, dark mode support)
+
+### Fixed
+
+- Excluded `node_modules` from file explorer for better performance
+
 ## [1.2.0] (2026-03-25)
 
 ### Added

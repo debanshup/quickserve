@@ -27,7 +27,7 @@
 - **Auto-reload** — browser reloads automatically on file save (`.html` and `.md` only)
 - **HMR** — hot module replacement for faster, state-preserving updates
 - **Deep dependency graph** — tracks file relationships for accurate change detection
-- **Self-healing HTTPS** — zero-config HTTPS that automatically recovers broken configurations (requires mkcert installed)
+- **Self-healing HTTPS** — zero-config HTTPS that automatically recovers broken configurations (requires `mkcert` installed)
 - **QR code for mobile** — scan to open your local server on any device on the same network
 - **File exclusions** — exclude specific files from change detection
 - **Customizable port** — configure the server port to fit your setup
