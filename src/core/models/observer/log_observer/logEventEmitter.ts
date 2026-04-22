@@ -1,5 +1,5 @@
 import { TypedEventEmitter } from "../../../event-emitter/TypedEventEmitter";
-export interface LoggerEventMap {
+interface LoggerEventMap {
   info: [payload: { msg: string }];
   connection_uri: [payload: { url: string }];
   http_request: [
