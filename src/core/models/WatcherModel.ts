@@ -5,7 +5,7 @@ import { HmrAnalyzer } from "../HMR/HmrAnalyzer";
 import {
   getCurrentDir,
   getRelativeFilePath,
-  processFilesafely,
+  processFileSafely,
 } from "../../utils/helper";
 import { fileCache } from "../../cache/FileCache";
 import { graph } from "../dependency-manager/DependencyGraph";
@@ -149,7 +149,7 @@ export class FileWatcher {
         /**
          * @critical
          */
-        const newContent = await processFilesafely(filePath);
+        const newContent = await processFileSafely(filePath);
         fileCache.set(filePath, newContent);
         if (!newContent) {
         }
@@ -163,7 +163,6 @@ export class FileWatcher {
           const ext = path.extname(filePath).toLowerCase();
 
           const textData = newContent.data as string;
-
           if (
             ext === ".html" ||
             ext === ".htm" ||

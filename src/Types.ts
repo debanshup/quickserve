@@ -17,6 +17,7 @@ export type WSMessage = {
   body?: string;
   style?: string;
   path?: string;
+  dependencies?: string[]; // to pass eta dependency
 };
 
 export type StartPayload = {
@@ -24,4 +25,4 @@ export type StartPayload = {
   port: number;
   isPublicAccessEnabled: boolean; // STRICTLY boolean (no undefined allowed)
   publicUrl: string;
-}
+};

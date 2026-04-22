@@ -236,6 +236,12 @@ export function getCurrentDir(): string | undefined {
   return workspaceFolders[0].uri.fsPath;
 }
 
+/**
+ *
+ * @param bodyContent
+ * @param title
+ *  used to wrap md content within html document
+ */
 export function wrapHtmlDocument(
   bodyContent: string,
   title: string = "Preview",
@@ -365,7 +371,7 @@ export function pathExists(path: string): boolean {
   }
 }
 
-export async function processFilesafely(filePath: string) {
+export async function processFileSafely(filePath: string) {
   let stats;
   try {
     stats = await fsPromise.stat(filePath);

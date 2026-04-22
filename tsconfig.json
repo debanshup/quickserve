@@ -5,6 +5,9 @@
 		"lib": [
 			"ES2022"
 		],
+		"types": [
+			"mocha"
+		],
 		"moduleResolution": "Node16", /* Essential for finding modern dependencies */
 		"outDir": "dist", /* Matches your package.json 'main' */
 		"rootDir": "src",

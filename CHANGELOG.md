@@ -2,6 +2,12 @@
 
 # Changelog
 
+## [x.x.x] (YYYY-MM-DD)
+
+### Fixed
+
+- Stability improvements
+
 ## [1.3.0] (2026-03-31)
 
 ### Added

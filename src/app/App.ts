@@ -18,13 +18,12 @@ import { Server } from "../core/models/ServerModel";
 import {
   getCurrentDir,
   isFolder,
-  getCurrentFile,
   getHost,
   getAvailablePort,
   listFilesRecursive,
   getFileBrowserUi,
   getFileExtension,
-  processFilesafely,
+  processFileSafely,
   supportsScriptInjection,
   getReloadScript,
   getStatusCode,
@@ -171,7 +170,7 @@ export class App implements vscode.Disposable {
             return res.end(html);
           }
 
-          const ext = getFileExtension(req.url!);
+          const ext = getFileExtension(fullReqPath);
 
           let result = fileCache.get(fullReqPath);
           // if (result) {
@@ -180,7 +179,7 @@ export class App implements vscode.Disposable {
 
           if (!result) {
             // console.info("Serving from disk");
-            const diskData = await processFilesafely(fullReqPath);
+            const diskData = await processFileSafely(fullReqPath);
             if (!diskData || !diskData.data) {
               // console.warn("null data for::", fullReqPath);
               res.writeHead(404, {
