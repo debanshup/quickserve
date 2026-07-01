@@ -7,7 +7,7 @@ import {
   getRelativeFilePath,
   processFileSafely,
 } from "../../utils/helper";
-import { fileCache } from "../../cache/FileCache";
+// import { fileCache } from "../../cache/FileCache";
 import { graph } from "../dependency-manager/DependencyGraph";
 import path from "path";
 import {
@@ -142,7 +142,10 @@ export class FileWatcher {
     });
 
     const hmrAnalyzer = new HmrAnalyzer();
+
+    console.info("watched file:", this.watcher!.getWatched());
     this.watcher.on("change", async (filePath) => {
+      // console.info("changing...");
       // console.info("watched file", this.watcher!.getWatched());
       try {
         const resolvedFilePath = path.resolve(filePath);
@@ -150,8 +153,9 @@ export class FileWatcher {
          * @critical
          */
         const newContent = await processFileSafely(filePath);
-        fileCache.set(filePath, newContent);
+        // fileCache.set(filePath, newContent);
         if (!newContent) {
+          console.info("no new content");
         }
         if (newContent?.type !== "text") {
           // console.log(` AST parse for binary/large file: ${filePath}`);
@@ -159,6 +163,9 @@ export class FileWatcher {
         }
 
         let msg: WSMessage = { action: "none" };
+
+        console.info(Config.getHMREnabled());
+
         if (Config.getHMREnabled()) {
           const ext = path.extname(filePath).toLowerCase();
 
@@ -210,8 +217,10 @@ export class FileWatcher {
             this.broadcastToPage(resolvedFilePath, graph, msg);
           }
         } else {
+          // console.info("full reload")
           this?.add(filePath);
           msg = { action: "reload" };
+          console.info(msg);
           this.broadcastToAll(msg);
         }
       } catch (error) {
@@ -229,7 +238,7 @@ export class FileWatcher {
         true,
       );
       // delete cache
-      fileCache.delete(filePath);
+      // fileCache.delete(filePath);
       // unwatch file
       this.remove(filePath);
       // trigger full reload

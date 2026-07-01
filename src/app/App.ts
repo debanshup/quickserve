@@ -33,7 +33,7 @@ import {
   getSafeRelativePath,
 } from "../utils/helper";
 import path from "path";
-import { fileCache } from "../cache/FileCache";
+// import { fileCache } from "../cache/FileCache";
 import { graph } from "../core/dependency-manager/DependencyGraph";
 import { MARKDOWN_EXTENSIONS } from "../constants/supported-extension";
 import { DependencyObserver } from "../core/models/observer/dependency_observer/dependencyObserver";
@@ -59,9 +59,13 @@ export class App implements vscode.Disposable {
     if (Config.getshowServerStatusOnStart()) {
       this.statusObserver.init();
     }
-    if (Config.getHMREnabled()) {
-      this.dependencyObserver.init();
-    }
+    // if (Config.getHMREnabled()) {
+    //   /**
+    //    * @issue 
+    //    * only inits if hmr is enabled!!
+    //    */
+    // }
+    this.dependencyObserver.init();
   }
   /**
    * get server instance
@@ -172,30 +176,30 @@ export class App implements vscode.Disposable {
 
           const ext = getFileExtension(fullReqPath);
 
-          let result = fileCache.get(fullReqPath);
+          // let result = fileCache.get(fullReqPath);
           // if (result) {
           //   console.info("Serving from ram");
           // }
 
-          if (!result) {
-            // console.info("Serving from disk");
-            const diskData = await processFileSafely(fullReqPath);
-            if (!diskData || !diskData.data) {
-              // console.warn("null data for::", fullReqPath);
-              res.writeHead(404, {
-                // Fake 'Success' to keep the browser quiet
-                "Content-Type": "text/plain",
-                "X-QuickServe-Error-Code": "FILE_NOT_FOUND",
-                "X-QuickServe-Internal-Msg": encodeURIComponent(
-                  "Could not resolve dependency graph",
-                ),
-                "Cache-Control": "no-store", // Ensure the browser doesn't cache this "fake" success
-              });
-              return res.end("");
-            }
-            result = diskData;
-            fileCache.set(fullReqPath, result);
+          // if (!result) {
+          // console.info("Serving from disk");
+          const diskData = await processFileSafely(fullReqPath);
+          if (!diskData || !diskData.data) {
+            // console.warn("null data for::", fullReqPath);
+            res.writeHead(404, {
+              // Fake 'Success' to keep the browser quiet
+              "Content-Type": "text/plain",
+              "X-QuickServe-Error-Code": "FILE_NOT_FOUND",
+              "X-QuickServe-Internal-Msg": encodeURIComponent(
+                "Could not resolve dependency graph",
+              ),
+              "Cache-Control": "no-store", // Ensure the browser doesn't cache this "fake" success
+            });
+            return res.end("");
           }
+          const result = diskData;
+          // fileCache.set(fullReqPath, result);
+          // }
 
           if (result?.type === "text") {
             let finalData = result.data as string;
