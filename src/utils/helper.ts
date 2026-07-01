@@ -613,6 +613,9 @@ export async function handleVersionUpdate(ctx: vscode.ExtensionContext) {
   const extension = vscode.extensions.getExtension(extensionId);
   const currentVersion = extension?.packageJSON.version;
   const previousVersion = ctx.globalState.get<string>("extensionVersion");
+  // const uri = vscode.Uri.joinPath(ctx.extensionUri, "README.md");
+  // await vscode.commands.executeCommand("markdown.showPreview", uri);
+
   //clean Install
   if (!previousVersion) {
     const uri = vscode.Uri.joinPath(ctx.extensionUri, "README.md");

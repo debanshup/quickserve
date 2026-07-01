@@ -1,144 +1,252 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <title>File Explorer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta charset="UTF-8" />
-  </head>
-  <style>
-    /* Theme Variables */
-    :root {
-      --bg-color: #ffffff;
-      --text-color: #000000;
-      --hover-bg: whitesmoke;
-      --active-bg: #e5e5e5;
-      --border-color: #eee;
-    }
-
-    @media (prefers-color-scheme: dark) {
+    <style>
+      /* Theme Variables */
       :root {
-        --bg-color: #1a1a1a; /* Darker background for OLED savings */
-        --text-color: #f0f0f0;
-        --hover-bg: #2c2c2e;
-        --active-bg: #3a3a3c;
-        --border-color: #333;
+        --bg-color: #f8f9fa;
+        --surface-color: #ffffff;
+        --text-main: #212529;
+        --text-muted: #6c757d;
+        --hover-bg: #f1f3f5;
+        --active-bg: #e9ecef;
+        --border-color: #e9ecef;
+        --accent-color: #3b82f6;
+        --icon-folder: #f59e0b;
+        --icon-file: #6b7280;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
       }
-    }
 
-    body {
-      margin: 0;
-      padding: 0;
-    }
-
-    .app {
-      background: var(--bg-color);
-      color: var(--text-color);
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-        Helvetica, Arial, sans-serif;
-      overflow-x: hidden;
-    }
-
-    /* Title */
-    .title {
-      text-align: center;
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin: 0;
-      padding: 1rem;
-      border-bottom: 1px solid var(--border-color);
-      position: sticky;
-      top: 0;
-      background: var(--bg-color);
-      z-index: 10;
-
-      word-wrap: break-word;
-      line-height: 1.4;
-    }
-
-    /* Tree container */
-    .file-tree {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 0.5rem;
-      overflow-x: auto;
-      padding-bottom: 2rem;
-    }
-
-    /* Nodes */
-    .node {
-      margin: 0;
-    }
-
-    /* Shared styles for rows (folders and files) to ensure hit areas are large */
-    .folder,
-    .file {
-      cursor: pointer;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      padding: 12px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
-      transition: background-color 0.1s;
-    }
-
-    /* Feedback for Touch interactions */
-    .folder:active,
-    .file:active {
-      background-color: var(--active-bg);
-    }
-
-    /* Keep hover for desktop/mouse users */
-    @media (hover: hover) {
-      .folder:hover,
-      .file:hover {
-        background-color: var(--hover-bg);
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #121212;
+          --surface-color: #1e1e1e;
+          --text-main: #f3f4f6;
+          --text-muted: #9ca3af;
+          --hover-bg: #2d2d2d;
+          --active-bg: #3d3d3d;
+          --border-color: #2a2a2a;
+          --accent-color: #60a5fa;
+          --icon-folder: #fbbf24;
+          --icon-file: #9ca3af;
+          --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
       }
-    }
 
-    .folder-icon {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 4px;
-      font-size: 1.1em;
-    }
+      * {
+        box-sizing: border-box;
+      }
 
-    .folder-label {
-      font-weight: 500;
-      font-size: 1rem;
-    }
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg-color);
+        color: var(--text-main);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
 
-    .file {
-      margin-left: 1.5rem;
-    }
+      .app {
+        max-width: 900px;
+        margin: 2rem auto;
+        background: var(--surface-color);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+      }
 
-    .file-name {
-      margin-left: 0.5rem;
-      font-size: 0.95rem;
-    }
+      @media (max-width: 940px) {
+        .app {
+          margin: 0;
+          border-radius: 0;
+          border: none;
+          min-height: 100vh;
+        }
+      }
 
-    /* Children container */
-    .children {
-      margin-left: 1rem;
-      display: none;
-      border-left: 1px solid var(--border-color);
-    }
+      /* Sticky Header Dashboard style */
+      .header {
+        position: sticky;
+        top: 0;
+        background: var(--surface-color);
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
 
-    .children.open {
-      display: block;
-    }
-  </style>
-  <body class="app">
-    <h2 class="title">File Explorer (root path: __ROOT__)</h2>
+      .header-icon {
+        color: var(--accent-color);
+        flex-shrink: 0;
+      }
 
-    <div id="file-tree" class="file-tree"></div>
+      .title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin: 0;
+        word-wrap: break-word;
+        color: var(--text-main);
+      }
+
+      .title span {
+        font-weight: 400;
+        color: var(--text-muted);
+        font-family: monospace;
+        background: var(--hover-bg);
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        margin-left: 0.25rem;
+      }
+
+      /* Tree Container */
+      .file-tree {
+        padding: 1rem 1.5rem 2.5rem 1.5rem;
+      }
+
+      .node {
+        margin: 0;
+      }
+
+      /* Shared styles for clickable rows */
+      .folder,
+      .file {
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        padding: 9px 12px;
+        border-radius: 8px;
+        transition:
+          background-color 0.15s ease,
+          transform 0.05s ease;
+        margin: 2px 0;
+      }
+
+      .folder:active,
+      .file:active {
+        background-color: var(--active-bg);
+        transform: scale(0.99);
+      }
+
+      @media (hover: hover) {
+        .folder:hover,
+        .file:hover {
+          background-color: var(--hover-bg);
+        }
+      }
+
+      /* Chevron styling */
+      .chevron-icon {
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 6px;
+        color: var(--text-muted);
+        transition: transform 0.2s ease;
+      }
+
+      .chevron-icon.open {
+        transform: rotate(90deg);
+      }
+
+      /* Type Icons */
+      .item-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .icon-folder-color {
+        color: var(--icon-folder);
+      }
+
+      .icon-file-color {
+        color: var(--icon-file);
+      }
+
+      /* Labels */
+      .label {
+        font-size: 0.95rem;
+        font-weight: 500;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+
+      .file .label {
+        font-weight: 400;
+      }
+
+      /* Nesting Line Layout */
+      .children {
+        margin-left: 20px;
+        padding-left: 8px;
+        border-left: 1px dashed var(--border-color);
+        display: grid;
+        grid-template-rows: 0fr;
+        transition:
+          grid-template-rows 0.25s ease-out,
+          opacity 0.2s ease-out;
+        opacity: 0;
+      }
+
+      .children.open {
+        grid-template-rows: 1fr;
+        opacity: 1;
+        margin-top: 2px;
+        margin-bottom: 2px;
+      }
+
+      /* Wrapper inside grid trick for dynamic height transition */
+      .children-inner {
+        overflow: hidden;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <div class="header">
+        <!-- Explorer Header Icon -->
+        <svg
+          class="header-icon"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+          ></path>
+        </svg>
+        <h2 class="title">File Explorer <span>__ROOT__</span></h2>
+      </div>
+
+      <div id="file-tree" class="file-tree"></div>
+    </div>
 
     <script>
-      // Mock data for testing since __FILE_TREE__ is server-side
+      // Mock data safely loaded
       const fileTree =
         typeof __FILE_TREE__ !== "undefined"
           ? __FILE_TREE__
@@ -159,62 +267,103 @@
                   },
                 ],
               },
+              {
+                type: "folder",
+                name: "assets",
+                children: [
+                  {
+                    type: "file",
+                    name: "logo.png",
+                    url: "demo-root/assets/logo.png",
+                  },
+                ],
+              },
               { type: "file", name: "README.md", url: "demo-root/README.md" },
             ];
 
-      const port = "__PORT__";
-
       function openFile(path) {
         const url = path.replace(/^.*?demo-root/, "");
-        window.open(url, "");
+        window.open(url, "_blank");
       }
+
+      // Reusable SVG strings for modern aesthetic
+      const chevronSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+      const folderSvg = `<svg class="icon-folder-color" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/></svg>`;
+      const folderOpenSvg = `<svg class="icon-folder-color" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>`;
+      const fileSvg = `<svg class="icon-file-color" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
 
       function buildTree(nodes, parent) {
         nodes.forEach((node) => {
-          const el = document.createElement("div");
-          el.className = "node"; // Class moved to wrapper
+          const nodeWrapper = document.createElement("div");
+          nodeWrapper.className = "node";
 
           if (node.type === "folder") {
-            const folder = document.createElement("div");
-            folder.className = "folder";
+            const folderRow = document.createElement("div");
+            folderRow.className = "folder";
 
-            const icon = document.createElement("span");
-            icon.textContent = "▸";
-            icon.className = "folder-icon";
+            const chevron = document.createElement("div");
+            chevron.className = "chevron-icon";
+            chevron.innerHTML = chevronSvg;
+
+            const icon = document.createElement("div");
+            icon.className = "item-icon";
+            icon.innerHTML = folderSvg;
 
             const label = document.createElement("span");
-            label.textContent = `📁 ${node.name}`;
-            label.className = "folder-label";
+            label.className = "label";
+            label.textContent = node.name;
 
-            folder.appendChild(icon);
-            folder.appendChild(label);
+            folderRow.appendChild(chevron);
+            folderRow.appendChild(icon);
+            folderRow.appendChild(label);
 
-            const children = document.createElement("div");
-            children.className = "children";
+            // Expandable container layout using CSS Grid transition trick
+            const childrenContainer = document.createElement("div");
+            childrenContainer.className = "children";
 
-            // Toggle logic
-            folder.onclick = (e) => {
-              e.stopPropagation(); // Good practice
-              const open = children.classList.toggle("open");
-              icon.textContent = open ? "▾" : "▸";
+            const childrenInner = document.createElement("div");
+            childrenInner.className = "children-inner";
+            childrenContainer.appendChild(childrenInner);
+
+            folderRow.onclick = (e) => {
+              e.stopPropagation();
+              const isOpen = childrenContainer.classList.toggle("open");
+              chevron.classList.toggle("open", isOpen);
+              icon.innerHTML = isOpen ? folderOpenSvg : folderSvg;
             };
 
-            el.appendChild(folder);
-            el.appendChild(children);
-            parent.appendChild(el);
+            nodeWrapper.appendChild(folderRow);
+            nodeWrapper.appendChild(childrenContainer);
+            parent.appendChild(nodeWrapper);
 
-            if (node.children) buildTree(node.children, children);
+            if (node.children) buildTree(node.children, childrenInner);
           } else {
-            const file = document.createElement("div");
-            file.className = "file";
-            file.innerHTML = `📄 <span class="file-name">${node.name}</span>`;
-            file.onclick = (e) => {
+            const fileRow = document.createElement("div");
+            fileRow.className = "file";
+
+            // Empty spacer matching chevron spacing to align files perfectly beneath folder content
+            const spacer = document.createElement("div");
+            spacer.className = "chevron-icon";
+
+            const icon = document.createElement("div");
+            icon.className = "item-icon";
+            icon.innerHTML = fileSvg;
+
+            const label = document.createElement("span");
+            label.className = "label";
+            label.textContent = node.name;
+
+            fileRow.appendChild(spacer);
+            fileRow.appendChild(icon);
+            fileRow.appendChild(label);
+
+            fileRow.onclick = (e) => {
               e.stopPropagation();
               openFile(node.url);
             };
 
-            el.appendChild(file);
-            parent.appendChild(el);
+            nodeWrapper.appendChild(fileRow);
+            parent.appendChild(nodeWrapper);
           }
         });
       }
