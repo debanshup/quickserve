@@ -2,11 +2,21 @@
 
 # Changelog
 
+## [1.3.2] (2026-07-1)
+
+### Fixed
+
+- Critical bugs
+
+### Changed
+
+- File Explorer look and feel
+
 ## [1.3.1] (2026-04-23)
 
 ### Fixed
 
-- Stability improvements
+- Stability issues
 
 ## [1.3.0] (2026-03-31)
 
