@@ -3,7 +3,7 @@ import { serverEvents } from "./serverEventEmitter";
 import { ERROR_MESSAGES } from "../../../../constants/errorMessages";
 import { POP_UP_MESSAGE } from "../../../../constants/pop-upMessage";
 import { Config } from "../../../../utils/config";
-import { statusbarUi } from "../../../../StatusBarUI";
+import { statusbarUi } from "../../../../add-ons/statusbar/StatusBarUI";
 const { getShowInfoMessages } = Config;
 export class ServerObserver {
   public init() {
