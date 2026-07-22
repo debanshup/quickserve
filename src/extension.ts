@@ -60,7 +60,7 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.commands.registerCommand(
         "quickserve.openFile",
         async (clickedUri?: vscode.Uri) => {
-          openWithQuickServe(clickedUri);
+          await openWithQuickServe(clickedUri);
         },
       ),
     );
