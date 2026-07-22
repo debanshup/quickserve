@@ -48,5 +48,8 @@
 3. **`quickserve.showServerStatusOnStart`**: Auto open output panel with URL + QR code on server start.  
    **Default**: `true`
 
-4. **`quickserve.openBrowser`**: Automatically open browser when server starts.  
-   **Default**: `true`
+4. **`quickserve.openWith`**: Controls where the preview opens when the server starts.  
+   **Default**: `"browser"`
+   - `"browser"` — Opens the project in your default external browser.
+   - `"internalWebview"` — Opens the project inside a VS Code internal Webview panel (required for in-editor device emulation).
+   - `"none"` — Do nothing when the server starts.
