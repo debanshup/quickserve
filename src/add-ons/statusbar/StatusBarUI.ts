@@ -1,6 +1,6 @@
 import { StatusBarAlignment, StatusBarItem, window } from "vscode";
-import { Config } from "./utils/config";
 import { ThemeColor } from "vscode";
+import { Config } from "../../utils/config";
 const { getShowStatusBar } = Config;
 class StatusbarUI {
   private _statusbar: StatusBarItem | undefined;
@@ -42,12 +42,6 @@ class StatusbarUI {
     this.statusBar.color = new ThemeColor("statusBarItem.warningForeground");
   }
 
-  /**
-   * Disposes of the status bar item, freeing associated resources.
-   */
-  public dispose() {
-    this.statusBar.dispose();
-  }
 }
 
 export const statusbarUi = new StatusbarUI();
