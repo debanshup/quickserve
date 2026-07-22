@@ -21,7 +21,6 @@ export type WSMessage = {
 };
 
 export type StartPayload = {
-  on: boolean;
   port: number;
   isPublicAccessEnabled: boolean; // STRICTLY boolean (no undefined allowed)
   publicUrl: string;
