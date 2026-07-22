@@ -14,9 +14,20 @@
 
 ## Demo
 
-![Demo](https://github.com/debanshup/quickserve/blob/main/images/instructions/demo.gif?raw=true)
+![Demo](https://github.com/debanshup/quickserve-assets/blob/main/images/instructions/demo.gif?raw=true)
 
----
+### In-Editor Device Emulation
+
+Test responsive layouts without leaving your code or opening external browser devtools. QuickServe leverages VS Code's native integrated browser to provide seamless mobile testing right next to your files.
+
+![Emulation](https://github.com/debanshup/quickserve-assets/blob/main/emulation_output.gif?raw=true)
+
+- **Zero Context Switching:** Toggle between standard mobile viewports (iPhone, Pixel, iPad) natively.
+- **Preserves HMR:** AST-driven surgical reloads pipe directly into the emulated device.
+- **Unobtrusive Execution:** Snaps instantly to a side-by-side split pane without stealing your editor focus.
+
+ **To enable:** Set `quickserve.openWith` to `"internalWebview"` in your VS Code settings. 
+ For more details, see [settings](https://github.com/debanshup/quickserve/blob/main/SETTINGS.md).
 
 ## Features
 
@@ -28,6 +39,7 @@
 - **Deep dependency graph** — tracks file relationships for accurate change detection
 - **Self-healing HTTPS** — zero-config HTTPS that automatically recovers broken configurations (requires `mkcert` installed)
 - **QR code for mobile** — scan to open your local server on any device on the same network
+- **In-editor device emulation** — test responsive mobile layouts side-by-side without leaving VS Code
 - **File exclusions** — exclude specific files from change detection
 - **Customizable port** — configure the server port to fit your setup
 - **Broad file support** — serves any file type, not just HTML and Markdown
@@ -53,26 +65,26 @@ ext install debanshupanigrahi.quickserve
 
 Click the QuickServe button in the status bar, or use the command palette (`Ctrl+Shift+P`) and run **quickserve.run**.
 
-![Start server](https://github.com/debanshup/quickserve/blob/main/images/instructions/start_server.png?raw=true)
+![Start server](https://github.com/debanshup/quickserve-assets/blob/main/images/instructions/start_server.png?raw=true)
 
 ### 2. Open the output panel
 
 To see server logs and the local URL, open the Output panel and select **QuickServe** from the drop
 down.
 
-![Output panel](https://github.com/debanshup/quickserve/blob/stable/images/instructions/log_output.png?raw=true)
+![Output panel](https://github.com/debanshup/quickserve-assets/blob/main/images/instructions/log_output.png?raw=true)
 
 ### 3. Access on mobile
 
 Scan the QR code shown in the output panel to instantly open the server on any mobile device connected to the same network.
 
-![Access](https://github.com/debanshup/quickserve/blob/stable/images/instructions/qr_code_demo.png?raw=true)
+![Access](https://github.com/debanshup/quickserve-assets/blob/main/images/instructions/qr_code_demo.png?raw=true)
 
 ### 4. Stop the server
 
 Click the QuickServe button in the status bar, or use the command palette (`Ctrl+Shift+P`) and run **quickserve.kill**.
 
-![Stop server](https://github.com/debanshup/quickserve/blob/stable/images/instructions/stop_server.png?raw=true)
+![Stop server](https://github.com/debanshup/quickserve-assets/blob/main/images/instructions/stop_server.png?raw=true)
 
 ---
 
