@@ -61,7 +61,7 @@ export class App implements vscode.Disposable {
     }
     // if (Config.getHMREnabled()) {
     //   /**
-    //    * @issue 
+    //    * @issue
     //    * only inits if hmr is enabled!!
     //    */
     // }
@@ -237,7 +237,6 @@ export class App implements vscode.Disposable {
               try {
                 await pipeline(result.data as any, res);
               } catch (err) {
-                // console.error("Pipeline failed", err);
                 if (!res.writableEnded) {
                   res.destroy();
                 }
@@ -262,19 +261,42 @@ export class App implements vscode.Disposable {
 
       const isPublicAccessEnabled = Config.getPublicAccessEnabled();
 
+      console.info(isPublicAccessEnabled);
+
       if (isPublicAccessEnabled) {
         this.publicUrl = `${proto}//${getLocalIP()}:${this.server?.port!.toString()}/`;
         loggerEvents.emit("connection_uri", { url: this.publicUrl });
       }
 
-      // open with a browser if enabled
-      if (Config.getOpenBrowserEnabled()) {
-        const safePath = getSafeRelativePath(currentFolderPath);
-        // console.info("safe path", safePath);
-        vscode.env.openExternal(
-          getConnectionURI(proto, HOST.LOCALHOST, port, safePath!),
-        );
+      const safePath = getSafeRelativePath(currentFolderPath);
+      const targetUrl = getConnectionURI(
+        proto,
+        HOST.LOCALHOST,
+        port,
+        safePath,
+      );
+
+      const previewTarget = Config.getPreviewLocation();
+
+      try {
+        if (previewTarget === "browser") {
+          await vscode.env.openExternal(targetUrl);
+        }
+
+        if (previewTarget === "internalWebview") {
+          await vscode.commands.executeCommand(
+            "simpleBrowser.show",
+            targetUrl.toString(),
+            {
+              preserveFocus: true,
+              viewColumn: vscode.ViewColumn.Beside,
+            },
+          );
+        }
+      } catch (error) {
+        console.error(error);
       }
+
       // save startup context
       ServerContext.isRunning = true;
       ServerContext.port = port;
@@ -288,7 +310,6 @@ export class App implements vscode.Disposable {
         true,
       );
       statusEvents.emit("start", {
-        on: server.on,
         port: this.server!.port,
         isPublicAccessEnabled,
         publicUrl: this.publicUrl,

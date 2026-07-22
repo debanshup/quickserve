@@ -637,7 +637,7 @@ export async function handleVersionUpdate(ctx: vscode.ExtensionContext) {
  * If no URI is provided, it falls back to the currently active editor tab.
  */
 
-export function openWithQuickServe(clickedUri?: vscode.Uri): void {
+export async function openWithQuickServe(clickedUri?: vscode.Uri) {
   let targetUri = clickedUri;
 
   if (!targetUri && vscode.window.activeTextEditor) {
@@ -662,7 +662,27 @@ export function openWithQuickServe(clickedUri?: vscode.Uri): void {
     const proto = ServerContext.proto;
     const host = ServerContext.host;
     const uriToOpen = getConnectionURI(proto, host, port, relativePath);
-    vscode.env.openExternal(uriToOpen);
+
+    const previewTarget = Config.getPreviewLocation();
+
+    try {
+      if (previewTarget === "browser") {
+        await vscode.env.openExternal(uriToOpen);
+      }
+
+      if (previewTarget === "internalWebview") {
+        await vscode.commands.executeCommand(
+          "simpleBrowser.show",
+          uriToOpen.toString(),
+          {
+            preserveFocus: true,
+            viewColumn: vscode.ViewColumn.Beside,
+          },
+        );
+      }
+    } catch (error) {
+      console.error( error);
+    }
   } else {
     vscode.window.showWarningMessage(
       "This file is outside the currently served QuickServe directory.",
