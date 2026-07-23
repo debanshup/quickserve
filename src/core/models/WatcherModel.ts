@@ -2,6 +2,8 @@ import * as chokidar from "chokidar";
 import WebSocket, { WebSocketServer } from "ws";
 // import { loggerEvents } from "./observer/log_observer/logEventEmitter";
 import { HmrAnalyzer } from "../HMR/HmrAnalyzer";
+import picomatch from "picomatch";
+
 import {
   getCurrentDir,
   getRelativeFilePath,
@@ -25,7 +27,7 @@ export class FileWatcher {
   private watcher?: chokidar.FSWatcher;
   private wsServer?: WebSocketServer;
   // private files: string | any;
-  private ignoredFileList: chokidar.Matcher = [] as unknown as chokidar.Matcher;
+  private ignoredFileList;
 
   /**
    * Initializes the FileWatcher with a WebSocket server
@@ -34,6 +36,7 @@ export class FileWatcher {
    */
   constructor(wss: WebSocketServer) {
     this.wsServer = wss;
+    this.ignoredFileList = Config.getIgnoredFiles();
   }
 
   on: boolean = false;
@@ -59,9 +62,9 @@ export class FileWatcher {
     this.watcher?.unwatch(file);
   }
 
-  private setIgnoredFiles(ignoredPattern: chokidar.Matcher) {
-    this.ignoredFileList = ignoredPattern;
-  }
+  // private setIgnoredFiles(ignoredPattern: chokidar.Matcher) {
+  //   this.ignoredFileList = ignoredPattern;
+  // }
 
   /**
    *
@@ -135,8 +138,16 @@ export class FileWatcher {
   }
 
   start(): void {
+    const matchers = this.ignoredFileList.map((pattern) =>
+      picomatch(pattern, { dot: true }),
+    );
+
     this.watcher = chokidar.watch([], {
-      ignored: this.ignoredFileList,
+      ignored: (file) => {
+        // normalize
+        const normalizedPath = file.replace(/\\/g, "/");
+        return matchers.some((isMatch) => isMatch(normalizedPath));
+      },
       awaitWriteFinish: false,
       persistent: true,
     });
@@ -144,6 +155,7 @@ export class FileWatcher {
     const hmrAnalyzer = new HmrAnalyzer();
 
     console.info("watched file:", this.watcher!.getWatched());
+
     this.watcher.on("change", async (filePath) => {
       // console.info("changing...");
       // console.info("watched file", this.watcher!.getWatched());

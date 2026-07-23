@@ -66,13 +66,14 @@ export class Config {
     return Config.getConfig().get<SSLConfig>("https");
   }
 
-  // public static getOpenBrowserEnabled() {
-  //   return Config.getConfig().get<boolean>("openBrowser");
-  // }
-
   public static getPreviewLocation() {
     return Config.getConfig().get<"browser" | "internalWebview" | "none">(
       "openWith",
     );
+  }
+
+  public static getIgnoredFiles(): string[] {
+    const config = vscode.workspace.getConfiguration("quickserve");
+    return config.get<string[]>("ignoredFiles", ["node_modules/**", ".git/**"]);
   }
 }
