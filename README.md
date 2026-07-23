@@ -26,8 +26,8 @@ Test responsive layouts without leaving your code or opening external browser de
 - **Preserves HMR:** AST-driven surgical reloads pipe directly into the emulated device.
 - **Unobtrusive Execution:** Snaps instantly to a side-by-side split pane without stealing your editor focus.
 
- **To enable:** Set `quickserve.openWith` to `"internalWebview"` in your VS Code settings. 
- For more details, see [settings](https://github.com/debanshup/quickserve/blob/main/SETTINGS.md).
+  **To enable:** Set `quickserve.openWith` to `"internalWebview"` in your VS Code settings.
+  For more details, see [settings](https://github.com/debanshup/quickserve/blob/main/SETTINGS.md).
 
 ## Features
 
@@ -91,6 +91,8 @@ Click the QuickServe button in the status bar, or use the command palette (`Ctrl
 ## Configuration
 
 For all available settings and configuration options, see [SETTINGS.md](https://github.com/debanshup/quickserve/blob/main/SETTINGS.md).
+
+> **Learn More:** Check out the official [Quickserve Blog Series](https://blog.debanshupanigrahi.dev/series/quickserve) for guides, tips, and updates.
 
 ---
 
