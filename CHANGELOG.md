@@ -2,7 +2,7 @@
 
 # Changelog
 
-## [1.4.0] - 2026-07-23
+## [1.4.0] - (2026-07-23)
 
 ### Added
 - In-editor preview via internal webview (`quickserve.openWith`).

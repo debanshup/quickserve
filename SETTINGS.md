@@ -11,6 +11,9 @@
 3. **`quickserve.enableHMR`**: Enable Hot Module Replacement for instant updates without full reload.  
    **Default**: `false`
 
+4. **`quickserve.ignoredFiles`**: List of fully qualified file paths or glob patterns to exclude from live reload watching.  
+   **Default**: `["node_modules/**", ".git/**", "**/.DS_Store"]`
+
 ---
 
 ## Network Settings
