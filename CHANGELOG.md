@@ -2,6 +2,13 @@
 
 # Changelog
 
+## [1.4.0] - 2026-07-23
+
+### Added
+- In-editor preview via internal webview (`quickserve.openWith`).
+- File watching exclusion support (`quickserve.ignoredFiles`).
+
+
 ## [1.3.2] (2026-07-01)
 
 ### Fixed
