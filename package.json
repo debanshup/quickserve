@@ -58,7 +58,7 @@
         {
           "command": "quickserve.kill",
           "group": "quickserve@2",
-          "when": "resourceLangId == html || resourceLangId == markdown"
+          "when": "quickserve.isRunning"
         }
       ],
       "explorer/context": [
@@ -161,11 +161,24 @@
             "internalWebview",
             "none"
           ],
-          "enumDescriptions": [
+          "markdownEnumDescriptions": [
             "Opens the project in your default external browser.",
-            "Opens the project inside a VS Code internal Webview panel.",
+            "Opens the project inside a VS Code internal Webview panel. (**Requires VS Code v1.109+ and Simple Browser to be enabled**)",
             "Do nothing when the server starts."
-          ]
+          ],
+          "description": "Controls where the preview opens when the server starts."
+        },
+        "quickserve.ignoredFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "node_modules/**",
+            ".git/**",
+            "**/.DS_Store"
+          ],
+          "description": "List of fully qualified file names or glob patterns to exclude from live reload watching (e.g., 'node_modules/**', 'src/**/*.tmp')."
         }
       }
     }
@@ -190,6 +203,7 @@
     "@types/css": "^0.0.38",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/picomatch": "^4.0.3",
     "@types/qrcode-terminal": "^0.12.2",
     "@types/vscode": "^1.100.0",
     "@types/ws": "^8.18.1",
@@ -212,6 +226,7 @@
     "get-port": "^7.1.0",
     "marked": "^15.0.11",
     "node-html-parser": "^7.0.2",
+    "picomatch": "^4.0.5",
     "qrcode-terminal": "^0.12.0",
     "selfsigned": "^5.5.0",
     "ws": "^8.18.2"
